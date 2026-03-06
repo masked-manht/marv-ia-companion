@@ -1,7 +1,8 @@
 import React from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Switch } from "@/components/ui/switch";
 import { isProModel } from "@/hooks/useCredits";
 
@@ -19,6 +20,7 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
 export default function SettingsView({ onBack, credits }: SettingsViewProps) {
   const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel } = useSettings();
   const { user, signOut } = useAuth();
+  const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
 
   const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">
@@ -122,6 +124,26 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
             </Row>
           )}
         </Section>
+
+        {/* Notifications */}
+        {supported && (
+          <Section icon={<Bell className="w-4 h-4" />} title="Notifications">
+            <Row label="Notifications push">
+              {permission === "granted" ? (
+                <span className="text-xs text-primary font-medium">Activées ✓</span>
+              ) : permission === "denied" ? (
+                <span className="text-xs text-destructive">Bloquées</span>
+              ) : (
+                <button onClick={async () => {
+                  const ok = await requestPermission();
+                  if (ok) sendLocalNotification("Marv-IA", "Notifications activées ! 🎉");
+                }} className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-lg">
+                  Activer
+                </button>
+              )}
+            </Row>
+          </Section>
+        )}
 
         {/* Technique */}
         <Section icon={<Wrench className="w-4 h-4" />} title="Technique">

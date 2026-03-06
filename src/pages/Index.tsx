@@ -6,8 +6,11 @@ import SidebarDrawer from "@/components/SidebarDrawer";
 import SettingsView from "@/components/SettingsView";
 import CreditsDisplay from "@/components/CreditsDisplay";
 import AuthPage from "@/components/AuthPage";
+import SplashScreen from "@/components/SplashScreen";
+import VoiceIndicator from "@/components/VoiceIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
+import { useVoice } from "@/hooks/useVoice";
 import { getConversations, deleteConversation } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
@@ -16,10 +19,12 @@ type View = "chat" | "pro" | "settings";
 const Index = () => {
   const { user, loading } = useAuth();
   const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
+  const { isSpeaking, stopSpeaking } = useVoice();
   const [view, setView] = useState<View>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
 
   const loadConversations = useCallback(async () => {
     if (!user) return;
@@ -45,6 +50,10 @@ const Index = () => {
     setActiveConversationId(id);
     setTimeout(loadConversations, 500);
   };
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   if (loading) {
     return (
@@ -74,6 +83,7 @@ const Index = () => {
           onRefreshCredits={refreshCredits}
           onBack={() => setView("chat")}
         />
+        <VoiceIndicator isSpeaking={isSpeaking} onStop={stopSpeaking} />
       </div>
     );
   }
@@ -94,7 +104,6 @@ const Index = () => {
             <p className="text-[11px] text-primary leading-tight">En ligne</p>
           </div>
         </div>
-        {/* Pro Button */}
         <button
           onClick={() => setView("pro")}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg hover:shadow-amber-500/30 transition-all hover:scale-105 active:scale-95"
@@ -115,6 +124,8 @@ const Index = () => {
           onConversationCreated={handleConversationCreated}
         />
       </div>
+
+      <VoiceIndicator isSpeaking={isSpeaking} onStop={stopSpeaking} />
 
       {/* Sidebar */}
       <SidebarDrawer

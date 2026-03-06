@@ -99,7 +99,7 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
     let currentConvId = conversationId;
     if (!currentConvId && user) {
       const title = `⚡ ${trimmed.slice(0, 45)}` || "⚡ Conversation Pro";
-      const { data } = await createConversation(user.id, title);
+      const { data } = await createConversation(user.id, title, true);
       if (data) { currentConvId = data.id; onConversationCreated(data.id); }
     }
 

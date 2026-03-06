@@ -125,8 +125,8 @@ export async function saveMessage(conversationId: string, userId: string, role: 
   return error;
 }
 
-export async function createConversation(userId: string, title: string) {
-  const { data, error } = await supabase.from("conversations").insert({ user_id: userId, title }).select().single();
+export async function createConversation(userId: string, title: string, isPro: boolean = false) {
+  const { data, error } = await supabase.from("conversations").insert({ user_id: userId, title, is_pro: isPro } as any).select().single();
   return { data, error };
 }
 

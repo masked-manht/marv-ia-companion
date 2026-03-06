@@ -1,10 +1,15 @@
+import { useState, useCallback, useRef } from "react";
+
 export function useVoice() {
-  const speak = (text: string, tone: "neutral" | "dynamic" | "soft" = "neutral") => {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const speak = useCallback((text: string, tone: "neutral" | "dynamic" | "soft" = "neutral") => {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "fr-FR";
-    
+
     if (tone === "dynamic") {
       utterance.rate = 1.1;
       utterance.pitch = 1.2;
@@ -20,10 +25,20 @@ export function useVoice() {
     const frVoice = voices.find(v => v.lang.startsWith("fr"));
     if (frVoice) utterance.voice = frVoice;
 
-    window.speechSynthesis.speak(utterance);
-  };
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    utteranceRef.current = utterance;
 
-  const startListening = (onResult: (text: string) => void, onEnd?: () => void): (() => void) => {
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  }, []);
+
+  const startListening = useCallback((onResult: (text: string) => void, onEnd?: () => void): (() => void) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn("Speech recognition not supported");
@@ -45,7 +60,7 @@ export function useVoice() {
 
     recognition.start();
     return () => recognition.stop();
-  };
+  }, []);
 
-  return { speak, startListening };
+  return { speak, startListening, isSpeaking, stopSpeaking };
 }

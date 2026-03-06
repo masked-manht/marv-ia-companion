@@ -1,24 +1,28 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2 } from "lucide-react";
+import { Send, Mic, ImagePlus, Copy, Check, StopCircle, Volume2, Share2, Crown, ArrowLeft, Sparkles, Image as ImageIcon } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { streamChat, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
+import { streamChat, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
 import { toast } from "sonner";
 
-type UIMessage = ChatMessage & { id: string };
+type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
 
-interface ChatViewProps {
+interface ProChatViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
+  credits: number;
+  onConsumeCredit: () => Promise<boolean>;
+  onRefreshCredits: () => void;
+  onBack: () => void;
 }
 
-const FREE_MODELS = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
+const PRO_MODEL = "google/gemini-2.5-pro";
 
-export default function ChatView({ conversationId, onConversationCreated }: ChatViewProps) {
+export default function ProChatView({ conversationId, onConversationCreated, credits, onConsumeCredit, onRefreshCredits, onBack }: ProChatViewProps) {
   const { user } = useAuth();
-  const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
+  const { voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
@@ -54,7 +58,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
   const handleShare = async (text: string) => {
     const cleanText = text.replace(/[#*_`]/g, "").slice(0, 1000);
     if (navigator.share) {
-      try { await navigator.share({ title: "Marv-IA", text: cleanText }); } catch {}
+      try { await navigator.share({ title: "Marv-IA Pro", text: cleanText }); } catch {}
     } else {
       window.open(`https://wa.me/?text=${encodeURIComponent(cleanText)}`, "_blank");
     }
@@ -77,24 +81,24 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     );
   };
 
-  // Force free model in normal mode
-  const effectiveModel = FREE_MODELS.includes(aiModel) ? aiModel : "google/gemini-3-flash-preview";
-
   const send = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Block Pro-only features
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
-    if (isImageGen) {
-      toast.error("La génération d'images est réservée au mode Pro ⚡", { icon: "👑" });
+
+    // Always consume credit in Pro mode
+    if (credits <= 0) {
+      toast.error("Crédits Pro épuisés ! Revenez demain ou passez en mode gratuit.", { icon: "⚡" });
       return;
     }
+    const success = await onConsumeCredit();
+    if (!success) { toast.error("Crédits Pro épuisés !", { icon: "⚡" }); return; }
 
     let currentConvId = conversationId;
     if (!currentConvId && user) {
-      const title = trimmed.slice(0, 50) || "Nouvelle conversation";
+      const title = `⚡ ${trimmed.slice(0, 45)}` || "⚡ Conversation Pro";
       const { data } = await createConversation(user.id, title);
       if (data) { currentConvId = data.id; onConversationCreated(data.id); }
     }
@@ -108,6 +112,24 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     setImagePreview(null);
 
     if (currentConvId && user) saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
+
+    if (isImageGen) {
+      setIsLoading(true);
+      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
+      const assistantId = crypto.randomUUID();
+      setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours...", isGeneratedImage: true }]);
+      const result = await generateImage(prompt);
+      if (result.error) {
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `❌ ${result.error}` } : m));
+      } else if (result.imageUrl) {
+        const content = result.text || "Image générée :";
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content, image_url: result.imageUrl } : m));
+        if (currentConvId && user) saveMessage(currentConvId, user.id, "assistant", content, result.imageUrl);
+      }
+      setIsLoading(false);
+      onRefreshCredits();
+      return;
+    }
 
     setIsLoading(true);
     let assistantSoFar = "";
@@ -125,7 +147,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
 
     await streamChat({
       messages: apiMessages,
-      model: effectiveModel,
+      model: PRO_MODEL,
       onDelta: (chunk) => {
         assistantSoFar += chunk;
         setMessages(prev => {
@@ -138,6 +160,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         setIsLoading(false);
         if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
         if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
+        onRefreshCredits();
       },
       onError: (err) => {
         setIsLoading(false);
@@ -145,29 +168,64 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, effectiveModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, credits, onConsumeCredit, onRefreshCredits]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-pro-bg">
+      {/* Pro Header */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-pro-card border-b border-pro-border flex-shrink-0">
+        <button onClick={onBack} className="text-pro-accent hover:opacity-80 transition-opacity">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2 flex-1">
+          <div className="w-8 h-8 bg-pro-accent/15 rounded-full flex items-center justify-center">
+            <Crown className="w-4 h-4 text-pro-accent" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-pro-fg leading-tight">Marv-IA Pro</p>
+            <p className="text-[11px] text-pro-accent leading-tight">Gemini 2.5 Pro</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 bg-pro-accent/10 px-2.5 py-1 rounded-full border border-pro-accent/20">
+          <Crown className="w-3.5 h-3.5 text-pro-accent" />
+          <span className="text-xs font-bold text-pro-accent">{credits}</span>
+        </div>
+      </div>
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide px-3 pt-2 pb-4 space-y-3">
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full opacity-60 space-y-3">
-            <Sparkles className="w-12 h-12 text-primary" />
-            <p className="text-lg font-semibold text-foreground">Marv-IA</p>
-            <p className="text-sm text-muted-foreground text-center max-w-[260px]">Posez votre question, Marv-IA est à votre service.</p>
+          <div className="flex flex-col items-center justify-center h-full space-y-4">
+            <div className="w-20 h-20 bg-pro-accent/10 rounded-2xl flex items-center justify-center border border-pro-accent/20">
+              <Crown className="w-10 h-10 text-pro-accent" />
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-xl font-bold text-pro-fg">Marv-IA Pro</p>
+              <p className="text-sm text-pro-muted max-w-[280px]">Modèle Gemini 2.5 Pro • Raisonnement avancé • Génération d'images</p>
+            </div>
+            <div className="flex gap-2">
+              {[
+                { icon: <Sparkles className="w-3.5 h-3.5" />, label: "Raisonnement" },
+                { icon: <ImageIcon className="w-3.5 h-3.5" />, label: "Images" },
+              ].map((f) => (
+                <div key={f.label} className="flex items-center gap-1.5 bg-pro-accent/10 text-pro-accent text-xs px-3 py-1.5 rounded-full border border-pro-accent/20">
+                  {f.icon}
+                  <span>{f.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`}>
             <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 ${
               msg.role === "user"
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-secondary text-secondary-foreground rounded-bl-md"
+                ? "bg-pro-accent text-pro-bg rounded-br-md"
+                : "bg-pro-card text-pro-fg rounded-bl-md border border-pro-border"
             }`}>
               {msg.image_url && (
                 <img src={msg.image_url} alt="Image" className="rounded-lg mb-2 max-w-full max-h-64 object-contain" />
@@ -177,14 +235,14 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
               </div>
               {msg.role === "assistant" && (
                 <div className="flex gap-2 mt-1.5 -mb-0.5">
-                  <button onClick={() => handleCopy(msg.content, msg.id)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                  <button onClick={() => handleCopy(msg.content, msg.id)} className="text-pro-muted hover:text-pro-accent transition-colors p-0.5">
                     {copiedId === msg.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
-                  <button onClick={() => handleShare(msg.content)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                  <button onClick={() => handleShare(msg.content)} className="text-pro-muted hover:text-pro-accent transition-colors p-0.5">
                     <Share2 className="w-3.5 h-3.5" />
                   </button>
                   {voiceEnabled && (
-                    <button onClick={() => speak(msg.content.replace(/[#*_`]/g, "").slice(0, 500), voiceTone)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                    <button onClick={() => speak(msg.content.replace(/[#*_`]/g, "").slice(0, 500), voiceTone)} className="text-pro-muted hover:text-pro-accent transition-colors p-0.5">
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -195,11 +253,11 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         ))}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start animate-slide-up">
-            <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3">
+            <div className="bg-pro-card rounded-2xl rounded-bl-md px-4 py-3 border border-pro-border">
               <div className="flex gap-1.5">
-                <span className="w-2 h-2 bg-primary rounded-full" style={{ animation: "typing-dot 1.4s infinite 0s" }} />
-                <span className="w-2 h-2 bg-primary rounded-full" style={{ animation: "typing-dot 1.4s infinite 0.2s" }} />
-                <span className="w-2 h-2 bg-primary rounded-full" style={{ animation: "typing-dot 1.4s infinite 0.4s" }} />
+                <span className="w-2 h-2 bg-pro-accent rounded-full" style={{ animation: "typing-dot 1.4s infinite 0s" }} />
+                <span className="w-2 h-2 bg-pro-accent rounded-full" style={{ animation: "typing-dot 1.4s infinite 0.2s" }} />
+                <span className="w-2 h-2 bg-pro-accent rounded-full" style={{ animation: "typing-dot 1.4s infinite 0.4s" }} />
               </div>
             </div>
           </div>
@@ -210,7 +268,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
       {imagePreview && (
         <div className="px-3 pb-1">
           <div className="relative inline-block">
-            <img src={imagePreview} alt="Preview" className="h-16 rounded-lg border border-border" />
+            <img src={imagePreview} alt="Preview" className="h-16 rounded-lg border border-pro-border" />
             <button onClick={() => setImagePreview(null)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center">×</button>
           </div>
         </div>
@@ -218,8 +276,8 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
 
       {/* Input bar */}
       <div className="px-3 pb-3 safe-bottom">
-        <div className="flex items-end gap-2 bg-secondary rounded-2xl px-3 py-2 border border-border">
-          <label className="cursor-pointer text-muted-foreground hover:text-primary transition-colors flex-shrink-0 self-end pb-1">
+        <div className="flex items-end gap-2 bg-pro-card rounded-2xl px-3 py-2 border border-pro-border">
+          <label className="cursor-pointer text-pro-muted hover:text-pro-accent transition-colors flex-shrink-0 self-end pb-1">
             <ImagePlus className="w-5 h-5" />
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
@@ -228,15 +286,15 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message Marv-IA..."
+            placeholder="Message Pro..."
             rows={1}
-            className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none outline-none text-[15px] max-h-32 py-1 select-text"
+            className="flex-1 bg-transparent text-pro-fg placeholder:text-pro-muted resize-none outline-none text-[15px] max-h-32 py-1 select-text"
             style={{ minHeight: "24px" }}
           />
-          <button onClick={handleVoice} className={`flex-shrink-0 self-end pb-1 transition-colors ${isListening ? "text-destructive" : "text-muted-foreground hover:text-primary"}`}>
+          <button onClick={handleVoice} className={`flex-shrink-0 self-end pb-1 transition-colors ${isListening ? "text-destructive" : "text-pro-muted hover:text-pro-accent"}`}>
             {isListening ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
-          <button onClick={send} disabled={isLoading || (!input.trim() && !imagePreview)} className="flex-shrink-0 self-end pb-0.5 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity">
+          <button onClick={send} disabled={isLoading || (!input.trim() && !imagePreview)} className="flex-shrink-0 self-end pb-0.5 w-8 h-8 bg-pro-accent text-pro-bg rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity">
             <Send className="w-4 h-4" />
           </button>
         </div>

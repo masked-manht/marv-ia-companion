@@ -40,6 +40,15 @@
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 16%;
     --sidebar-ring: 120 100% 55%;
+
+    /* Pro theme tokens */
+    --pro-bg: 240 15% 6%;
+    --pro-card: 240 12% 10%;
+    --pro-fg: 45 10% 92%;
+    --pro-border: 240 10% 16%;
+    --pro-accent: 45 100% 60%;
+    --pro-muted: 240 5% 45%;
+    --pro-glow: 0 0 12px hsl(45 100% 60% / 0.25), 0 0 24px hsl(45 100% 60% / 0.1);
   }
 
   .light {

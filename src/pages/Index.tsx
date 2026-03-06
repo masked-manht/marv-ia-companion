@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Menu, Sparkles, Settings, Search } from "lucide-react";
+import { Menu, Sparkles, Settings, Crown } from "lucide-react";
 import ChatView from "@/components/ChatView";
+import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
 import SettingsView from "@/components/SettingsView";
 import CreditsDisplay from "@/components/CreditsDisplay";
@@ -10,7 +11,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { getConversations, deleteConversation } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
-type View = "chat" | "settings";
+type View = "chat" | "pro" | "settings";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -26,23 +27,18 @@ const Index = () => {
     if (data) setConversations(data);
   }, [user]);
 
-  useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+  useEffect(() => { loadConversations(); }, [loadConversations]);
 
   const handleNewConversation = () => {
     setActiveConversationId(null);
-    setView("chat");
+    if (view === "settings") setView("chat");
   };
 
   const handleDeleteConversation = async (id: string) => {
     const error = await deleteConversation(id);
-    if (error) {
-      toast.error("Erreur de suppression");
-    } else {
-      if (activeConversationId === id) setActiveConversationId(null);
-      loadConversations();
-    }
+    if (error) { toast.error("Erreur de suppression"); return; }
+    if (activeConversationId === id) setActiveConversationId(null);
+    loadConversations();
   };
 
   const handleConversationCreated = (id: string) => {
@@ -61,12 +57,25 @@ const Index = () => {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
+  if (!user) return <AuthPage />;
 
   if (view === "settings") {
     return <SettingsView onBack={() => setView("chat")} credits={credits} />;
+  }
+
+  if (view === "pro") {
+    return (
+      <div className="h-screen flex flex-col overflow-hidden" style={{ background: "hsl(240 15% 6%)" }}>
+        <ProChatView
+          conversationId={activeConversationId}
+          onConversationCreated={handleConversationCreated}
+          credits={credits}
+          onConsumeCredit={consumeCredit}
+          onRefreshCredits={refreshCredits}
+          onBack={() => setView("chat")}
+        />
+      </div>
+    );
   }
 
   return (
@@ -85,7 +94,15 @@ const Index = () => {
             <p className="text-[11px] text-primary leading-tight">En ligne</p>
           </div>
         </div>
-        <CreditsDisplay credits={credits} />
+        {/* Pro Button */}
+        <button
+          onClick={() => setView("pro")}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg hover:shadow-amber-500/30 transition-all hover:scale-105 active:scale-95"
+        >
+          <Crown className="w-3.5 h-3.5" />
+          <span>PRO</span>
+          <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[10px]">{credits}</span>
+        </button>
         <button onClick={() => setView("settings")} className="text-muted-foreground hover:text-foreground transition-colors">
           <Settings className="w-5 h-5" />
         </button>
@@ -96,13 +113,10 @@ const Index = () => {
         <ChatView
           conversationId={activeConversationId}
           onConversationCreated={handleConversationCreated}
-          credits={credits}
-          onConsumeCredit={consumeCredit}
-          onRefreshCredits={refreshCredits}
         />
       </div>
 
-      {/* Sidebar Drawer */}
+      {/* Sidebar */}
       <SidebarDrawer
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Menu, Sparkles } from "lucide-react";
+import { Menu, Sparkles, Settings, Search } from "lucide-react";
 import ChatView from "@/components/ChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
 import SettingsView from "@/components/SettingsView";
+import CreditsDisplay from "@/components/CreditsDisplay";
 import AuthPage from "@/components/AuthPage";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCredits } from "@/hooks/useCredits";
 import { getConversations, deleteConversation } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
@@ -12,6 +14,7 @@ type View = "chat" | "settings";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
   const [view, setView] = useState<View>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -44,7 +47,6 @@ const Index = () => {
 
   const handleConversationCreated = (id: string) => {
     setActiveConversationId(id);
-    // Reload conversations list after a short delay
     setTimeout(loadConversations, 500);
   };
 
@@ -64,7 +66,7 @@ const Index = () => {
   }
 
   if (view === "settings") {
-    return <SettingsView onBack={() => setView("chat")} />;
+    return <SettingsView onBack={() => setView("chat")} credits={credits} />;
   }
 
   return (
@@ -83,6 +85,10 @@ const Index = () => {
             <p className="text-[11px] text-primary leading-tight">En ligne</p>
           </div>
         </div>
+        <CreditsDisplay credits={credits} />
+        <button onClick={() => setView("settings")} className="text-muted-foreground hover:text-foreground transition-colors">
+          <Settings className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Chat */}
@@ -90,6 +96,9 @@ const Index = () => {
         <ChatView
           conversationId={activeConversationId}
           onConversationCreated={handleConversationCreated}
+          credits={credits}
+          onConsumeCredit={consumeCredit}
+          onRefreshCredits={refreshCredits}
         />
       </div>
 

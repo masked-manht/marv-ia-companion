@@ -1,5 +1,5 @@
-import React from "react";
-import { MessageSquarePlus, Trash2, Settings, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { MessageSquarePlus, Trash2, Settings, Sparkles, Search, X } from "lucide-react";
 
 interface Conversation {
   id: string;
@@ -19,12 +19,16 @@ interface SidebarDrawerProps {
 }
 
 export default function SidebarDrawer({ open, onClose, conversations, activeId, onSelect, onNew, onDelete, onOpenSettings }: SidebarDrawerProps) {
+  const [search, setSearch] = useState("");
+
+  const filtered = search.trim()
+    ? conversations.filter(c => c.title.toLowerCase().includes(search.toLowerCase()))
+    : conversations;
+
   return (
     <>
-      {/* Overlay */}
       {open && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />}
       
-      {/* Drawer */}
       <div className={`fixed top-0 left-0 h-full w-72 bg-card border-r border-border z-50 transform transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} flex flex-col`}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-border">
@@ -37,12 +41,32 @@ export default function SidebarDrawer({ open, onClose, conversations, activeId, 
           </button>
         </div>
 
+        {/* Search */}
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+            <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher..."
+              className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none flex-1"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Conversations list */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide py-2">
-          {conversations.length === 0 && (
-            <p className="text-center text-muted-foreground text-sm py-8">Aucune conversation</p>
+        <div className="flex-1 overflow-y-auto scrollbar-hide py-1">
+          {filtered.length === 0 && (
+            <p className="text-center text-muted-foreground text-sm py-8">
+              {search ? "Aucun résultat" : "Aucune conversation"}
+            </p>
           )}
-          {conversations.map(conv => (
+          {filtered.map(conv => (
             <div
               key={conv.id}
               onClick={() => { onSelect(conv.id); onClose(); }}

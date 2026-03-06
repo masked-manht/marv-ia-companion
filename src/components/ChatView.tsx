@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2 } from "lucide-react";
+import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Crown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { streamChat, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
+import { isProModel } from "@/hooks/useCredits";
 import { toast } from "sonner";
 
 type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
@@ -12,9 +13,12 @@ type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
 interface ChatViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
+  credits: number;
+  onConsumeCredit: () => Promise<boolean>;
+  onRefreshCredits: () => void;
 }
 
-export default function ChatView({ conversationId, onConversationCreated }: ChatViewProps) {
+export default function ChatView({ conversationId, onConversationCreated, credits, onConsumeCredit, onRefreshCredits }: ChatViewProps) {
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
@@ -28,7 +32,6 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stopListeningRef = useRef<(() => void) | null>(null);
 
-  // Load messages when conversation changes
   useEffect(() => {
     if (conversationId) {
       getMessages(conversationId).then(({ data }) => {
@@ -78,12 +81,24 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Check for image generation command
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
+    const needsCredit = isImageGen || isProModel(aiModel);
+
+    // Check credits for pro features
+    if (needsCredit) {
+      if (credits <= 0) {
+        toast.error("Crédits Pro épuisés ! Utilisez un modèle gratuit ou attendez demain.", { icon: "⚡" });
+        return;
+      }
+      const success = await onConsumeCredit();
+      if (!success) {
+        toast.error("Crédits Pro épuisés !", { icon: "⚡" });
+        return;
+      }
+    }
 
     let currentConvId = conversationId;
 
-    // Create conversation if needed
     if (!currentConvId && user) {
       const title = trimmed.slice(0, 50) || "Nouvelle conversation";
       const { data } = await createConversation(user.id, title);
@@ -95,20 +110,17 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
 
     const userMsgId = crypto.randomUUID();
     const userContent = imagePreview ? `[Image envoyée]\n${trimmed}` : trimmed;
-
     const userMsg: UIMessage = { id: userMsgId, role: "user", content: userContent, image_url: imagePreview || undefined };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     const sentImage = imagePreview;
     setImagePreview(null);
 
-    // Save user message to DB
     if (currentConvId && user) {
       saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
     }
 
     if (isImageGen) {
-      // Image generation mode
       setIsLoading(true);
       const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
       const assistantId = crypto.randomUUID();
@@ -125,15 +137,14 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         }
       }
       setIsLoading(false);
+      onRefreshCredits();
       return;
     }
 
-    // Normal chat mode
     setIsLoading(true);
     let assistantSoFar = "";
     const assistantId = crypto.randomUUID();
 
-    // Build messages for API - include image if present
     const apiMessages: any[] = messages.map(m => ({ role: m.role, content: m.content }));
     
     if (sentImage) {
@@ -172,6 +183,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         if (voiceEnabled && assistantSoFar) {
           speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
         }
+        if (needsCredit) onRefreshCredits();
       },
       onError: (err) => {
         setIsLoading(false);
@@ -179,7 +191,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, aiModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, aiModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening, credits, onConsumeCredit, onRefreshCredits]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -188,8 +200,18 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     }
   };
 
+  const currentIsProModel = isProModel(aiModel);
+
   return (
     <div className="flex flex-col h-full bg-background">
+      {/* Pro model indicator */}
+      {currentIsProModel && (
+        <div className="flex items-center justify-center gap-1.5 py-1 bg-yellow-500/10 border-b border-yellow-500/20">
+          <Crown className="w-3 h-3 text-yellow-500" />
+          <span className="text-[11px] text-yellow-500 font-medium">Mode Pro • 1 crédit/message</span>
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide px-3 pt-2 pb-4 space-y-3">
         {messages.length === 0 && (

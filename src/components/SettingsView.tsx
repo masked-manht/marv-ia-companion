@@ -1,20 +1,22 @@
 import React from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, ChevronRight, Moon, Sun, Monitor } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
+import { isProModel } from "@/hooks/useCredits";
 
 interface SettingsViewProps {
   onBack: () => void;
+  credits: number;
 }
 
-const MODEL_LABELS: Record<string, string> = {
-  "google/gemini-3-flash-preview": "Gemini 3 Flash (Rapide)",
-  "google/gemini-2.5-flash": "Gemini 2.5 Flash (Équilibré)",
-  "google/gemini-2.5-pro": "Gemini 2.5 Pro (Puissant)",
+const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
+  "google/gemini-3-flash-preview": { label: "Gemini 3 Flash (Rapide)", pro: false },
+  "google/gemini-2.5-flash": { label: "Gemini 2.5 Flash (Équilibré)", pro: false },
+  "google/gemini-2.5-pro": { label: "Gemini 2.5 Pro (Puissant)", pro: true },
 };
 
-export default function SettingsView({ onBack }: SettingsViewProps) {
+export default function SettingsView({ onBack, credits }: SettingsViewProps) {
   const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel } = useSettings();
   const { user, signOut } = useAuth();
 
@@ -39,13 +41,37 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
         <button onClick={onBack} className="text-primary"><ArrowLeft className="w-5 h-5" /></button>
-        <h2 className="text-lg font-semibold text-foreground">Paramètres</h2>
+        <h2 className="text-lg font-semibold text-foreground flex-1">Paramètres</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4">
+        {/* Crédits */}
+        <Section icon={<Zap className="w-4 h-4" />} title="Crédits Pro">
+          <Row label="Crédits restants">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-bold ${credits <= 5 ? "text-destructive" : "text-primary"}`}>{credits}/25</span>
+            </div>
+          </Row>
+          <Row label="Renouvellement" value="Chaque jour à minuit (UTC)" />
+          <div className="px-4 py-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Crown className="w-3.5 h-3.5 text-yellow-500" />
+              <span className="font-medium text-foreground">Fonctionnalités Pro (1 crédit)</span>
+            </div>
+            <p>• Modèles IA avancés (Gemini 2.5 Pro)</p>
+            <p>• Génération d'images (/image)</p>
+            <div className="flex items-center gap-1.5 mt-2 mb-1">
+              <Zap className="w-3.5 h-3.5 text-primary" />
+              <span className="font-medium text-foreground">Gratuit illimité</span>
+            </div>
+            <p>• Gemini 3 Flash & Gemini 2.5 Flash</p>
+            <p>• Analyse d'images envoyées</p>
+            <p>• Mode vocal</p>
+          </div>
+        </Section>
+
         {/* Compte */}
         <Section icon={<User className="w-4 h-4" />} title="Compte">
           <Row label="Utilisateur" value={user?.email || "Non connecté"} />
@@ -105,8 +131,10 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               onChange={(e) => setAiModel(e.target.value as any)}
               className="bg-muted text-foreground text-xs px-2 py-1 rounded-lg border border-border outline-none"
             >
-              {Object.entries(MODEL_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+              {Object.entries(MODEL_LABELS).map(([value, { label, pro }]) => (
+                <option key={value} value={value}>
+                  {label}{pro ? " ⚡ Pro" : ""}
+                </option>
               ))}
             </select>
           </Row>
@@ -117,7 +145,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
 
         {/* Infos */}
         <Section icon={<Info className="w-4 h-4" />} title="Infos">
-          <Row label="Version" value="1.0.0" />
+          <Row label="Version" value="1.1.0" />
           <Row label="Développeur" value="Marvens Zamy" />
           <Row label="Moteur" value="Marv-IA Omni-Protocol" />
         </Section>

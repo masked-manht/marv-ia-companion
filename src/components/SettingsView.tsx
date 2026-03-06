@@ -20,6 +20,7 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
 export default function SettingsView({ onBack, credits }: SettingsViewProps) {
   const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel } = useSettings();
   const { user, signOut } = useAuth();
+  const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
 
   const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">

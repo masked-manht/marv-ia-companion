@@ -1,0 +1,17 @@
+{
+  "name": "Marv-IA",
+  "short_name": "Marv-IA",
+  "description": "Assistant IA connecté au réel - Conçu par Marvens Zamy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#39FF14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/marvia-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -123,3 +123,13 @@
   0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-4px); }
 }
+
+@keyframes splash-load {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
+@keyframes voice-bar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}

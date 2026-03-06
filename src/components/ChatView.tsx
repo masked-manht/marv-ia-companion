@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Crown } from "lucide-react";
+import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Crown, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { streamChat, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +61,21 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
+  };
+
+  const handleShare = async (text: string) => {
+    const cleanText = text.replace(/[#*_`]/g, "").slice(0, 1000);
+    const shareData = { title: "Marv-IA", text: cleanText };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch { /* cancelled */ }
+    } else {
+      // Fallback: WhatsApp link
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(cleanText)}`;
+      window.open(whatsappUrl, "_blank");
+    }
   };
 
   const handleVoice = () => {
@@ -218,7 +233,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
           <div className="flex flex-col items-center justify-center h-full opacity-60 space-y-3">
             <Sparkles className="w-12 h-12 text-primary" />
             <p className="text-lg font-semibold text-foreground">Marv-IA</p>
-            <p className="text-sm text-muted-foreground text-center max-w-[260px]">Connecté au réel. Posez votre question ou envoyez /image pour générer une image.</p>
+            <p className="text-sm text-muted-foreground text-center max-w-[260px]">Posez votre question ou envoyez /image pour générer une image.</p>
           </div>
         )}
         {messages.map((msg) => (
@@ -238,6 +253,9 @@ export default function ChatView({ conversationId, onConversationCreated, credit
                 <div className="flex gap-2 mt-1.5 -mb-0.5">
                   <button onClick={() => handleCopy(msg.content, msg.id)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
                     {copiedId === msg.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                  <button onClick={() => handleShare(msg.content)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                    <Share2 className="w-3.5 h-3.5" />
                   </button>
                   {voiceEnabled && (
                     <button onClick={() => speak(msg.content.replace(/[#*_`]/g, "").slice(0, 500), voiceTone)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">

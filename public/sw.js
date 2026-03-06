@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marvia-v1.1';
+const CACHE_NAME = 'marvia-v1.2';
 const PRECACHE_URLS = [
   '/',
   '/marvia-icon.png',
@@ -23,7 +23,6 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  // Network first for API, cache first for assets
   if (event.request.url.includes('/functions/') || event.request.url.includes('supabase')) return;
   
   event.respondWith(
@@ -34,5 +33,33 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => caches.match(event.request))
+  );
+});
+
+// Push notifications
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Marv-IA';
+  const options = {
+    body: data.body || 'Nouveau message',
+    icon: '/marvia-icon.png',
+    badge: '/marvia-icon.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || '/' },
+    actions: [{ action: 'open', title: 'Ouvrir' }],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(url) && 'focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
+    })
   );
 });

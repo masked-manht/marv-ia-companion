@@ -1,1 +1,7 @@
 project_id = "niqjltsnxqmsvgataryy"
+
+[functions.marvia-chat]
+verify_jwt = false
+
+[functions.marvia-image]
+verify_jwt = false

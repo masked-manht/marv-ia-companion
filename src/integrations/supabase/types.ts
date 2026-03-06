@@ -103,12 +103,37 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          created_at: string
+          credits_remaining: number
+          id: string
+          last_reset_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_remaining?: number
+          id?: string
+          last_reset_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_remaining?: number
+          id?: string
+          last_reset_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_credit: { Args: { p_user_id: string }; Returns: number }
+      get_or_reset_credits: { Args: { p_user_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never

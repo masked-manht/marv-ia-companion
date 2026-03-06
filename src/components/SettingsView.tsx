@@ -125,6 +125,26 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
           )}
         </Section>
 
+        {/* Notifications */}
+        {supported && (
+          <Section icon={<Bell className="w-4 h-4" />} title="Notifications">
+            <Row label="Notifications push">
+              {permission === "granted" ? (
+                <span className="text-xs text-primary font-medium">Activées ✓</span>
+              ) : permission === "denied" ? (
+                <span className="text-xs text-destructive">Bloquées</span>
+              ) : (
+                <button onClick={async () => {
+                  const ok = await requestPermission();
+                  if (ok) sendLocalNotification("Marv-IA", "Notifications activées ! 🎉");
+                }} className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-lg">
+                  Activer
+                </button>
+              )}
+            </Row>
+          </Section>
+        )}
+
         {/* Technique */}
         <Section icon={<Wrench className="w-4 h-4" />} title="Technique">
           <Row label="Modèle IA">

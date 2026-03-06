@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
 import { toast } from "sonner";
-import { toast } from "sonner";
 
 type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
 
@@ -187,7 +186,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         if (voiceEnabled && assistantSoFar) {
           speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
         }
-        if (needsCredit) onRefreshCredits();
+        },
       },
       onError: (err) => {
         setIsLoading(false);
@@ -195,7 +194,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, aiModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening, credits, onConsumeCredit, onRefreshCredits]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, aiModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -204,17 +203,9 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     }
   };
 
-  const currentIsProModel = isProModel(aiModel);
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Pro model indicator */}
-      {currentIsProModel && (
-        <div className="flex items-center justify-center gap-1.5 py-1 bg-yellow-500/10 border-b border-yellow-500/20">
-          <Crown className="w-3 h-3 text-yellow-500" />
-          <span className="text-[11px] text-yellow-500 font-medium">Mode Pro • 1 crédit/message</span>
-        </div>
-      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide px-3 pt-2 pb-4 space-y-3">

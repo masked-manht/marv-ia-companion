@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Crown, Share2 } from "lucide-react";
+import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { streamChat, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
-import { isProModel } from "@/hooks/useCredits";
+import { toast } from "sonner";
 import { toast } from "sonner";
 
 type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
@@ -13,12 +13,9 @@ type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
 interface ChatViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
-  credits: number;
-  onConsumeCredit: () => Promise<boolean>;
-  onRefreshCredits: () => void;
 }
 
-export default function ChatView({ conversationId, onConversationCreated, credits, onConsumeCredit, onRefreshCredits }: ChatViewProps) {
+export default function ChatView({ conversationId, onConversationCreated }: ChatViewProps) {
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
@@ -97,19 +94,11 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (isLoading) return;
 
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
-    const needsCredit = isImageGen || isProModel(aiModel);
 
-    // Check credits for pro features
-    if (needsCredit) {
-      if (credits <= 0) {
-        toast.error("Crédits Pro épuisés ! Utilisez un modèle gratuit ou attendez demain.", { icon: "⚡" });
-        return;
-      }
-      const success = await onConsumeCredit();
-      if (!success) {
-        toast.error("Crédits Pro épuisés !", { icon: "⚡" });
-        return;
-      }
+    // Image gen not available in free mode
+    if (isImageGen) {
+      toast.error("La génération d'images est réservée au mode Pro ⚡", { icon: "👑" });
+      return;
     }
 
     let currentConvId = conversationId;

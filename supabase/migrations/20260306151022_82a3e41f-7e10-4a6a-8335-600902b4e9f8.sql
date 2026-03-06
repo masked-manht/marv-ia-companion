@@ -1,0 +1,1 @@
+ALTER TABLE public.conversations ADD COLUMN is_pro boolean NOT NULL DEFAULT false;

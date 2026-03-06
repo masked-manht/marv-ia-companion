@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { streamChat, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
+import { streamChat, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
 import { toast } from "sonner";
 
-type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
+type UIMessage = ChatMessage & { id: string };
 
 interface ChatViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
 }
+
+const FREE_MODELS = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
 
 export default function ChatView({ conversationId, onConversationCreated }: ChatViewProps) {
   const { user } = useAuth();
@@ -31,9 +33,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
   useEffect(() => {
     if (conversationId) {
       getMessages(conversationId).then(({ data }) => {
-        if (data) {
-          setMessages(data.map(m => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content, image_url: m.image_url || undefined })));
-        }
+        if (data) setMessages(data.map(m => ({ id: m.id, role: m.role as "user" | "assistant", content: m.content, image_url: m.image_url || undefined })));
       });
     } else {
       setMessages([]);
@@ -51,6 +51,15 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleShare = async (text: string) => {
+    const cleanText = text.replace(/[#*_`]/g, "").slice(0, 1000);
+    if (navigator.share) {
+      try { await navigator.share({ title: "Marv-IA", text: cleanText }); } catch {}
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(cleanText)}`, "_blank");
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -59,27 +68,8 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     reader.readAsDataURL(file);
   };
 
-  const handleShare = async (text: string) => {
-    const cleanText = text.replace(/[#*_`]/g, "").slice(0, 1000);
-    const shareData = { title: "Marv-IA", text: cleanText };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch { /* cancelled */ }
-    } else {
-      // Fallback: WhatsApp link
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(cleanText)}`;
-      window.open(whatsappUrl, "_blank");
-    }
-  };
-
   const handleVoice = () => {
-    if (isListening) {
-      stopListeningRef.current?.();
-      setIsListening(false);
-      return;
-    }
+    if (isListening) { stopListeningRef.current?.(); setIsListening(false); return; }
     setIsListening(true);
     stopListeningRef.current = startListening(
       (text) => { setInput(prev => prev + text); },
@@ -87,28 +77,26 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     );
   };
 
+  // Force free model in normal mode
+  const effectiveModel = FREE_MODELS.includes(aiModel) ? aiModel : "google/gemini-3-flash-preview";
+
   const send = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
+    // Block Pro-only features
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
-
-    // Image gen not available in free mode
     if (isImageGen) {
       toast.error("La génération d'images est réservée au mode Pro ⚡", { icon: "👑" });
       return;
     }
 
     let currentConvId = conversationId;
-
     if (!currentConvId && user) {
       const title = trimmed.slice(0, 50) || "Nouvelle conversation";
       const { data } = await createConversation(user.id, title);
-      if (data) {
-        currentConvId = data.id;
-        onConversationCreated(data.id);
-      }
+      if (data) { currentConvId = data.id; onConversationCreated(data.id); }
     }
 
     const userMsgId = crypto.randomUUID();
@@ -119,45 +107,15 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     const sentImage = imagePreview;
     setImagePreview(null);
 
-    if (currentConvId && user) {
-      saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
-    }
-
-    if (isImageGen) {
-      setIsLoading(true);
-      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
-      const assistantId = crypto.randomUUID();
-      setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération de l'image en cours...", isGeneratedImage: true }]);
-
-      const result = await generateImage(prompt);
-      if (result.error) {
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `❌ ${result.error}` } : m));
-      } else if (result.imageUrl) {
-        const content = result.text || "Voici l'image générée :";
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content, image_url: result.imageUrl } : m));
-        if (currentConvId && user) {
-          saveMessage(currentConvId, user.id, "assistant", content, result.imageUrl);
-        }
-      }
-      setIsLoading(false);
-      onRefreshCredits();
-      return;
-    }
+    if (currentConvId && user) saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
 
     setIsLoading(true);
     let assistantSoFar = "";
     const assistantId = crypto.randomUUID();
-
     const apiMessages: any[] = messages.map(m => ({ role: m.role, content: m.content }));
-    
+
     if (sentImage) {
-      apiMessages.push({
-        role: "user",
-        content: [
-          { type: "image_url", image_url: { url: sentImage } },
-          { type: "text", text: trimmed || "Analyse cette image." },
-        ],
-      });
+      apiMessages.push({ role: "user", content: [{ type: "image_url", image_url: { url: sentImage } }, { type: "text", text: trimmed || "Analyse cette image." }] });
     } else {
       let stylePrefix = "";
       if (responseStyle === "precise") stylePrefix = "[Réponds de manière concise et précise] ";
@@ -167,26 +125,19 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
 
     await streamChat({
       messages: apiMessages,
-      model: aiModel,
+      model: effectiveModel,
       onDelta: (chunk) => {
         assistantSoFar += chunk;
         setMessages(prev => {
           const last = prev[prev.length - 1];
-          if (last?.id === assistantId) {
-            return prev.map(m => m.id === assistantId ? { ...m, content: assistantSoFar } : m);
-          }
+          if (last?.id === assistantId) return prev.map(m => m.id === assistantId ? { ...m, content: assistantSoFar } : m);
           return [...prev, { id: assistantId, role: "assistant", content: assistantSoFar }];
         });
       },
       onDone: () => {
         setIsLoading(false);
-        if (currentConvId && user && assistantSoFar) {
-          saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
-        }
-        if (voiceEnabled && assistantSoFar) {
-          speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
-        }
-        },
+        if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
+        if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
       },
       onError: (err) => {
         setIsLoading(false);
@@ -194,26 +145,21 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, aiModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, effectiveModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
-
 
   return (
     <div className="flex flex-col h-full bg-background">
-
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide px-3 pt-2 pb-4 space-y-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full opacity-60 space-y-3">
             <Sparkles className="w-12 h-12 text-primary" />
             <p className="text-lg font-semibold text-foreground">Marv-IA</p>
-            <p className="text-sm text-muted-foreground text-center max-w-[260px]">Posez votre question ou envoyez /image pour générer une image.</p>
+            <p className="text-sm text-muted-foreground text-center max-w-[260px]">Posez votre question, Marv-IA est à votre service.</p>
           </div>
         )}
         {messages.map((msg) => (

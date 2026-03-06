@@ -16,16 +16,13 @@ export function useNotifications() {
   const sendLocalNotification = useCallback((title: string, body: string) => {
     if (permission !== "granted") return;
     
-    // Use service worker registration for persistent notifications
     navigator.serviceWorker.ready.then((reg) => {
       reg.showNotification(title, {
         body,
         icon: "/marvia-icon.png",
         badge: "/marvia-icon.png",
-        vibrate: [100, 50, 100],
-      });
+      } as any);
     }).catch(() => {
-      // Fallback to basic notification
       new Notification(title, { body, icon: "/marvia-icon.png" });
     });
   }, [permission]);

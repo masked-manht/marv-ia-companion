@@ -63,6 +63,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        pro: {
+          bg: "hsl(var(--pro-bg))",
+          card: "hsl(var(--pro-card))",
+          fg: "hsl(var(--pro-fg))",
+          border: "hsl(var(--pro-border))",
+          accent: "hsl(var(--pro-accent))",
+          muted: "hsl(var(--pro-muted))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

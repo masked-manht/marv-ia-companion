@@ -268,19 +268,35 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         </div>
       )}
 
+      {/* Location indicator */}
+      {locationActive && (
+        <div className="px-3 pb-1">
+          <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+            <MapPin className="w-3 h-3" /> Position activée
+            <button onClick={() => setLocationActive(false)} className="ml-1 hover:text-destructive">×</button>
+          </span>
+        </div>
+      )}
+
       {/* Input bar */}
       <div className="px-3 pb-3 safe-bottom">
-        <div className="flex items-end gap-2 bg-secondary rounded-2xl px-3 py-2 border border-border">
+        <div className="flex items-end gap-1.5 bg-secondary rounded-2xl px-3 py-2 border border-border">
           <label className="cursor-pointer text-muted-foreground hover:text-primary transition-colors flex-shrink-0 self-end pb-1">
             <ImagePlus className="w-5 h-5" />
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
+          <button onClick={handleCamera} className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 self-end pb-1">
+            <Camera className="w-5 h-5" />
+          </button>
+          <button onClick={handleLocation} className={`flex-shrink-0 self-end pb-1 transition-colors ${locationActive ? "text-primary" : "text-muted-foreground hover:text-primary"}`}>
+            <MapPin className="w-5 h-5" />
+          </button>
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message Marv-IA..."
+            placeholder="/search actualité • Message..."
             rows={1}
             className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none outline-none text-[15px] max-h-32 py-1 select-text"
             style={{ minHeight: "24px" }}

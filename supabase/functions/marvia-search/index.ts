@@ -5,16 +5,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SEARCH_SYSTEM_PROMPT = `Tu es Marv-IA Search, un assistant spécialisé dans la recherche d'informations actuelles.
+const SEARCH_SYSTEM_PROMPT = `Tu es Marv-IA Search, un moteur de recherche intelligent alimenté par les derniers modèles d'IA (mars 2026).
+
+CAPACITÉS :
+- Tu as accès à des connaissances actualisées jusqu'à début mars 2026.
+- Tu peux répondre sur l'actualité récente, les résultats sportifs, les événements mondiaux, la politique, la technologie, les tendances.
+- Tu peux analyser des tendances et faire des projections basées sur les données disponibles.
 
 RÈGLES :
-- Fournis des réponses structurées et factuelles sur l'actualité, le sport, la météo, les événements.
-- Si l'utilisateur fournit sa position GPS (latitude/longitude), utilise-la pour contextualiser ta réponse (ville proche, météo locale, événements locaux).
-- Indique toujours la date de tes connaissances si tu n'es pas sûr d'avoir l'info la plus récente.
-- Utilise le markdown pour structurer tes réponses.
-- Ne dis jamais "En tant qu'IA" ni ne mentionne tes limitations de manière répétitive.
-- Sois direct et utile.
-- Mentionne que tes informations sont basées sur tes données d'entraînement quand pertinent.`;
+- Réponds avec assurance sur les faits que tu connais. Ne dis PAS "mes données s'arrêtent à..." sauf si on te demande un événement très récent (dernières 24h).
+- Si l'utilisateur fournit sa position GPS, contextualise (ville, météo locale probable, événements locaux).
+- Structure tes réponses avec du markdown : titres, listes, gras.
+- Cite des sources quand c'est pertinent (sites d'actualité, organismes officiels).
+- Pour le sport : scores, classements, transferts, calendriers.
+- Pour l'actualité : résumés factuels, contexte, analyse.
+- Pour la météo : prévisions probables basées sur la saison et la localisation.
+- Pour la tech : dernières sorties, mises à jour, comparatifs.
+- N'utilise JAMAIS "En tant qu'IA", "En tant que modèle de langage" ou des formulations similaires.
+- Sois direct, expert et précis.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -28,7 +36,7 @@ serve(async (req) => {
 
     let userContent = query;
     if (location) {
-      userContent += `\n\n[Position GPS de l'utilisateur : latitude ${location.latitude}, longitude ${location.longitude}]`;
+      userContent += `\n\n[Position GPS : latitude ${location.latitude}, longitude ${location.longitude}]`;
     }
 
     const chatMessages = [
@@ -37,6 +45,7 @@ serve(async (req) => {
       { role: "user", content: userContent },
     ];
 
+    // Use the most capable model for search queries
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -44,7 +53,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-pro",
         messages: chatMessages,
         stream: true,
       }),
@@ -52,7 +61,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte." }), {
+        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte. Réessayez." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

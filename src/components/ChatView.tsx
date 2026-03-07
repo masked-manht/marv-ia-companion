@@ -82,6 +82,21 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     );
   };
 
+  const handleCamera = async () => {
+    const photo = await capture();
+    if (photo) setImagePreview(photo);
+  };
+
+  const handleLocation = async () => {
+    const loc = await requestLocation();
+    if (loc) {
+      setLocationActive(true);
+      toast.success(`📍 Position activée (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`);
+    } else {
+      toast.error("Impossible d'obtenir la position. Vérifiez les permissions.");
+    }
+  };
+
   // Force free model in normal mode
   const effectiveModel = FREE_MODELS.includes(aiModel) ? aiModel : "google/gemini-3-flash-preview";
 

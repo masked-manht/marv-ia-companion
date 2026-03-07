@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.marvia-image]
 verify_jwt = false
+
+[functions.marvia-search]
+verify_jwt = false

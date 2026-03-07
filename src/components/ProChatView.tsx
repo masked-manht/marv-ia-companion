@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Copy, Check, StopCircle, Volume2, Share2, Crown, ArrowLeft, Sparkles, Image as ImageIcon } from "lucide-react";
+import { Send, Mic, ImagePlus, Copy, Check, StopCircle, Volume2, Share2, Crown, ArrowLeft, Sparkles, Image as ImageIcon, Camera, MapPin, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { streamChat, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
+import { streamChat, streamSearch, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
+import { useLocation } from "@/hooks/useLocation";
+import { useCamera } from "@/hooks/useCamera";
 import { toast } from "sonner";
 
 type UIMessage = ChatMessage & { id: string; isGeneratedImage?: boolean };
@@ -24,12 +26,15 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
   const { user } = useAuth();
   const { voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
+  const { location, requestLocation } = useLocation();
+  const { capture } = useCamera();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [locationActive, setLocationActive] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stopListeningRef = useRef<(() => void) | null>(null);
@@ -79,6 +84,21 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
       (text) => { setInput(prev => prev + text); },
       () => setIsListening(false)
     );
+  };
+
+  const handleCamera = async () => {
+    const photo = await capture();
+    if (photo) setImagePreview(photo);
+  };
+
+  const handleLocation = async () => {
+    const loc = await requestLocation();
+    if (loc) {
+      setLocationActive(true);
+      toast.success(`📍 Position activée (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`);
+    } else {
+      toast.error("Impossible d'obtenir la position.");
+    }
   };
 
   const send = useCallback(async () => {
@@ -131,6 +151,38 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
       return;
     }
 
+    // Search mode
+    const isSearch = trimmed.toLowerCase().startsWith("/search ") || trimmed.toLowerCase().startsWith("/s ");
+    if (isSearch) {
+      setIsLoading(true);
+      const searchQuery = trimmed.replace(/^\/(search|s)\s+/i, "");
+      let assistantSoFar = "";
+      const assistantId = crypto.randomUUID();
+      await streamSearch({
+        query: searchQuery,
+        location: locationActive ? location : null,
+        onDelta: (chunk) => {
+          assistantSoFar += chunk;
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.id === assistantId) return prev.map(m => m.id === assistantId ? { ...m, content: assistantSoFar } : m);
+            return [...prev, { id: assistantId, role: "assistant", content: assistantSoFar }];
+          });
+        },
+        onDone: () => {
+          setIsLoading(false);
+          if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
+          onRefreshCredits();
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+          setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "assistant", content: `❌ ${err}` }]);
+        },
+      });
+      return;
+    }
+
     setIsLoading(true);
     let assistantSoFar = "";
     const assistantId = crypto.randomUUID();
@@ -142,6 +194,7 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
       let stylePrefix = "";
       if (responseStyle === "precise") stylePrefix = "[Réponds de manière concise et précise] ";
       else if (responseStyle === "creative") stylePrefix = "[Réponds de manière détaillée et créative] ";
+      if (locationActive && location) stylePrefix += `[Position: ${location.latitude}, ${location.longitude}] `;
       apiMessages.push({ role: "user", content: stylePrefix + trimmed });
     }
 
@@ -168,7 +221,7 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
         setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, credits, onConsumeCredit, onRefreshCredits]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, credits, onConsumeCredit, onRefreshCredits, location, locationActive]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
@@ -274,19 +327,35 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
         </div>
       )}
 
+      {/* Location indicator */}
+      {locationActive && (
+        <div className="px-3 pb-1">
+          <span className="inline-flex items-center gap-1 text-xs bg-pro-accent/10 text-pro-accent px-2 py-0.5 rounded-full border border-pro-accent/20">
+            <MapPin className="w-3 h-3" /> Position activée
+            <button onClick={() => setLocationActive(false)} className="ml-1 hover:text-destructive">×</button>
+          </span>
+        </div>
+      )}
+
       {/* Input bar */}
       <div className="px-3 pb-3 safe-bottom">
-        <div className="flex items-end gap-2 bg-pro-card rounded-2xl px-3 py-2 border border-pro-border">
+        <div className="flex items-end gap-1.5 bg-pro-card rounded-2xl px-3 py-2 border border-pro-border">
           <label className="cursor-pointer text-pro-muted hover:text-pro-accent transition-colors flex-shrink-0 self-end pb-1">
             <ImagePlus className="w-5 h-5" />
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
+          <button onClick={handleCamera} className="text-pro-muted hover:text-pro-accent transition-colors flex-shrink-0 self-end pb-1">
+            <Camera className="w-5 h-5" />
+          </button>
+          <button onClick={handleLocation} className={`flex-shrink-0 self-end pb-1 transition-colors ${locationActive ? "text-pro-accent" : "text-pro-muted hover:text-pro-accent"}`}>
+            <MapPin className="w-5 h-5" />
+          </button>
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message Pro..."
+            placeholder="/search news • /image prompt • Message..."
             rows={1}
             className="flex-1 bg-transparent text-pro-fg placeholder:text-pro-muted resize-none outline-none text-[15px] max-h-32 py-1 select-text"
             style={{ minHeight: "24px" }}

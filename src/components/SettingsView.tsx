@@ -1,10 +1,19 @@
 import React from "react";
 import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell } from "lucide-react";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Switch } from "@/components/ui/switch";
 import { isProModel } from "@/hooks/useCredits";
+
+const ACCENT_LABELS: Record<AccentColor, { label: string; preview: string }> = {
+  green:  { label: "Vert",   preview: "bg-[hsl(120,100%,55%)]" },
+  blue:   { label: "Bleu",   preview: "bg-[hsl(217,91%,60%)]" },
+  purple: { label: "Violet", preview: "bg-[hsl(270,76%,62%)]" },
+  orange: { label: "Orange", preview: "bg-[hsl(25,95%,53%)]" },
+  pink:   { label: "Rose",   preview: "bg-[hsl(330,81%,60%)]" },
+  cyan:   { label: "Cyan",   preview: "bg-[hsl(187,85%,53%)]" },
+};
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -18,7 +27,7 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
 };
 
 export default function SettingsView({ onBack, credits }: SettingsViewProps) {
-  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel } = useSettings();
+  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor } = useSettings();
   const { user, signOut } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
 
@@ -102,6 +111,18 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
                 <button key={s} onClick={() => setResponseStyle(s)} className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${responseStyle === s ? "bg-primary text-primary-foreground neon-glow" : "bg-muted text-muted-foreground"}`}>
                   {s === "precise" ? "Précis" : s === "standard" ? "Standard" : "Créatif"}
                 </button>
+              ))}
+            </div>
+          </Row>
+          <Row label="Couleur d'accent">
+            <div className="flex gap-1.5">
+              {(Object.keys(ACCENT_LABELS) as AccentColor[]).map(c => (
+                <button
+                  key={c}
+                  onClick={() => setAccentColor(c)}
+                  className={`w-7 h-7 rounded-full ${ACCENT_LABELS[c].preview} transition-all ${accentColor === c ? "ring-2 ring-foreground ring-offset-2 ring-offset-background scale-110" : "opacity-70 hover:opacity-100"}`}
+                  title={ACCENT_LABELS[c].label}
+                />
               ))}
             </div>
           </Row>

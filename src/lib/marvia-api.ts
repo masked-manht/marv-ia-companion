@@ -177,6 +177,7 @@ export async function streamSearch({
   }
 }
 
+export async function generateImage(prompt: string): Promise<{ imageUrl?: string; text?: string; error?: string }> {
   try {
     const resp = await fetch(IMAGE_URL, {
       method: "POST",

@@ -5,7 +5,10 @@ interface Conversation {
   id: string;
   title: string;
   updated_at: string;
+  is_pro: boolean;
 }
+
+type FilterTab = "all" | "standard" | "pro";
 
 interface SidebarDrawerProps {
   open: boolean;
@@ -20,10 +23,15 @@ interface SidebarDrawerProps {
 
 export default function SidebarDrawer({ open, onClose, conversations, activeId, onSelect, onNew, onDelete, onOpenSettings }: SidebarDrawerProps) {
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<FilterTab>("all");
 
-  const filtered = search.trim()
-    ? conversations.filter(c => c.title.toLowerCase().includes(search.toLowerCase()))
-    : conversations;
+  const filtered = conversations
+    .filter(c => {
+      if (filter === "pro") return c.is_pro;
+      if (filter === "standard") return !c.is_pro;
+      return true;
+    })
+    .filter(c => !search.trim() || c.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
@@ -39,6 +47,19 @@ export default function SidebarDrawer({ open, onClose, conversations, activeId, 
           <button onClick={onNew} className="p-2 text-primary hover:bg-muted rounded-lg transition-colors" title="Nouvelle conversation">
             <MessageSquarePlus className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-1 px-3 pt-2">
+          {([["all", "Tout"], ["standard", "Standard"], ["pro", "⚡ Pro"]] as [FilterTab, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`flex-1 text-xs py-1.5 rounded-lg font-medium transition-all ${filter === key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Search */}

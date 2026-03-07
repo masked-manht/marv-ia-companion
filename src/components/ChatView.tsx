@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2 } from "lucide-react";
+import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2, Camera, MapPin, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { streamChat, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
+import { streamChat, streamSearch, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
+import { useLocation } from "@/hooks/useLocation";
+import { useCamera } from "@/hooks/useCamera";
 import { toast } from "sonner";
 
 type UIMessage = ChatMessage & { id: string };

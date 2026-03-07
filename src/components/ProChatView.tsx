@@ -26,12 +26,15 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
   const { user } = useAuth();
   const { voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
+  const { location, requestLocation } = useLocation();
+  const { capture } = useCamera();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [locationActive, setLocationActive] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stopListeningRef = useRef<(() => void) | null>(null);
@@ -81,6 +84,21 @@ export default function ProChatView({ conversationId, onConversationCreated, cre
       (text) => { setInput(prev => prev + text); },
       () => setIsListening(false)
     );
+  };
+
+  const handleCamera = async () => {
+    const photo = await capture();
+    if (photo) setImagePreview(photo);
+  };
+
+  const handleLocation = async () => {
+    const loc = await requestLocation();
+    if (loc) {
+      setLocationActive(true);
+      toast.success(`📍 Position activée (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`);
+    } else {
+      toast.error("Impossible d'obtenir la position.");
+    }
   };
 
   const send = useCallback(async () => {

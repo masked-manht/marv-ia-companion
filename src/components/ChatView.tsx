@@ -112,9 +112,12 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
       return;
     }
 
+    // Detect search queries
+    const isSearch = trimmed.toLowerCase().startsWith("/search ") || trimmed.toLowerCase().startsWith("/s ");
+
     let currentConvId = conversationId;
     if (!currentConvId && user) {
-      const title = trimmed.slice(0, 50) || "Nouvelle conversation";
+      const title = (isSearch ? "🔍 " : "") + (trimmed.slice(0, 50) || "Nouvelle conversation");
       const { data } = await createConversation(user.id, title);
       if (data) { currentConvId = data.id; onConversationCreated(data.id); }
     }
@@ -132,6 +135,34 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     setIsLoading(true);
     let assistantSoFar = "";
     const assistantId = crypto.randomUUID();
+
+    if (isSearch) {
+      const searchQuery = trimmed.replace(/^\/(search|s)\s+/i, "");
+      await streamSearch({
+        query: searchQuery,
+        location: locationActive ? location : null,
+        onDelta: (chunk) => {
+          assistantSoFar += chunk;
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last?.id === assistantId) return prev.map(m => m.id === assistantId ? { ...m, content: assistantSoFar } : m);
+            return [...prev, { id: assistantId, role: "assistant", content: assistantSoFar }];
+          });
+        },
+        onDone: () => {
+          setIsLoading(false);
+          if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
+          if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
+        },
+        onError: (err) => {
+          setIsLoading(false);
+          toast.error(err);
+          setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
+        },
+      });
+      return;
+    }
+
     const apiMessages: any[] = messages.map(m => ({ role: m.role, content: m.content }));
 
     if (sentImage) {
@@ -140,6 +171,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
       let stylePrefix = "";
       if (responseStyle === "precise") stylePrefix = "[Réponds de manière concise et précise] ";
       else if (responseStyle === "creative") stylePrefix = "[Réponds de manière détaillée et créative] ";
+      if (locationActive && location) stylePrefix += `[Position: ${location.latitude}, ${location.longitude}] `;
       apiMessages.push({ role: "user", content: stylePrefix + trimmed });
     }
 
@@ -165,7 +197,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
         setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, effectiveModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, startListening]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, effectiveModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, location, locationActive]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }

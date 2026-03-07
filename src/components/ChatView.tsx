@@ -22,12 +22,15 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
+  const { location, requestLocation } = useLocation();
+  const { capture } = useCamera();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [locationActive, setLocationActive] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stopListeningRef = useRef<(() => void) | null>(null);

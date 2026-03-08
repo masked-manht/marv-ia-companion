@@ -13,6 +13,12 @@ function needsWebSearch(text: string): boolean {
   return patterns.test(text);
 }
 
+// Detect time queries that mention a specific country/city
+function isTimeQueryWithLocation(text: string): boolean {
+  const timePattern = /quelle heure.+(à|en|au|aux|a)\s+\w+|what time.+(in)\s+\w+|heure.+(à|en|au|aux)\s+\w+|l'heure.+(à|en|au|aux)\s+\w+/i;
+  return timePattern.test(text);
+}
+
 // --- Firecrawl web search ---
 async function searchWeb(query: string, apiKey: string): Promise<string> {
   try {

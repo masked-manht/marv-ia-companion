@@ -393,8 +393,17 @@ ${jsFile?.content || ""}
                   )}
                 </button>
                 <div className="flex-1" />
+                {isPythonActive && (
+                  <button
+                    onClick={handleRunPython}
+                    className="flex items-center gap-1 px-2 py-1 mx-1 text-[10px] font-medium bg-[#39FF14]/15 text-[#39FF14] rounded hover:bg-[#39FF14]/25 transition-colors"
+                  >
+                    <Play className="w-3 h-3" />
+                    Python
+                  </button>
+                )}
                 <button
-                  onClick={() => { /* Force re-render preview */ setFiles(prev => [...prev]); }}
+                  onClick={() => { setFiles(prev => [...prev]); }}
                   className="px-2 py-2 text-[#4A5568] hover:text-[#39FF14] transition-colors"
                   title="Relancer"
                 >

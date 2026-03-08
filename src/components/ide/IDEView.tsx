@@ -49,6 +49,8 @@ export default function IDEView({ onBack }: IDEViewProps) {
   const htmlFile = files.find(f => f.language === "html");
   const cssFile = files.find(f => f.language === "css");
   const jsFile = files.find(f => f.language === "javascript");
+  const pyFile = files.find(f => f.language === "python");
+  const isPythonActive = activeFile.language === "python";
 
   const updateFileContent = useCallback((content: string) => {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content } : f));

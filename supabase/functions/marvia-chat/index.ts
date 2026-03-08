@@ -265,7 +265,7 @@ out body 25;`;
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: buildSystemPrompt() },
+          { role: "system", content: buildSystemPrompt(timezone) },
           ...enrichedMessages,
         ],
         stream: true,

@@ -206,11 +206,18 @@ serve(async (req) => {
         if (memories && memories.length > 0) {
           const categoryLabels: Record<string, string> = {
             identite: "👤 Identité", lieu: "📍 Lieu", profession: "💼 Profession",
-            preference: "⭐ Préférence", projet: "📋 Projet", relation: "👥 Relation", general: "📝 Général"
+            preference: "⭐ Préférence", projet: "📋 Projet", relation: "👥 Relation",
+            style: "🎭 Style de communication", humeur: "💭 Humeur habituelle", general: "📝 Général"
           };
-          memoriesBlock = "\n\nMÉMOIRE UTILISATEUR (informations connues) :\n" +
+          memoriesBlock = "\n\nMÉMOIRE VIVANTE (ce que tu sais sur cet utilisateur) :\n" +
             memories.map((m: any) => `- ${categoryLabels[m.category] || "📝"} : ${m.content}`).join("\n") +
-            "\n\nUtilise ces informations naturellement dans tes réponses. Par exemple, appelle l'utilisateur par son prénom si tu le connais. Ne liste PAS ces informations sauf si on te les demande.";
+            "\n\nCOMPORTEMENT ADAPTATIF :" +
+            "\n- Utilise ces souvenirs NATURELLEMENT, comme un ami qui se souvient." +
+            "\n- Appelle l'utilisateur par son prénom quand c'est naturel (pas à chaque message)." +
+            "\n- Fais référence à ses projets, préférences, ou conversations passées quand c'est pertinent." +
+            "\n- Adapte ton ton et ton style à ce que tu sais de lui (style de communication mémorisé)." +
+            "\n- Ne LISTE JAMAIS ces informations sauf si on te les demande explicitement." +
+            "\n- Plus tu connais l'utilisateur, plus tu es personnel et chaleureux.";
         }
       } catch (e) {
         console.error("Failed to fetch memories:", e);

@@ -225,7 +225,7 @@ ${jsFile?.content || ""}
     return () => vv.removeEventListener("resize", onResize);
   }, []);
 
-  const ChatPanel = ({ className = "" }: { className?: string }) => (
+  const renderChatPanel = (className = "") => (
     <div className={`flex flex-col ${className}`}>
       <div className="px-3 py-2.5 border-b border-[#1E2433] flex items-center gap-2 flex-shrink-0">
         <Sparkles className="w-4 h-4 text-[#007BFF]" />

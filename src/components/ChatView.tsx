@@ -26,7 +26,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
-  const { location, requestLocation } = useLocation();
+  const { location, error: locationError, requestLocation } = useLocation();
   const { capture } = useCamera();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");

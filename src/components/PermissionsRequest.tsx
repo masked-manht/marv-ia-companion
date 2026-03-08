@@ -139,7 +139,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               />
 
               <button
-                onClick={() => setStep("location")}
+                onClick={() => advanceTo("location")}
                 className="w-full mt-4 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
               >
                 Continuer

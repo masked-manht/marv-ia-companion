@@ -1,17 +1,45 @@
 {
-  "name": "Marv-IA",
+  "name": "Marv-IA - Assistant IA intelligent",
   "short_name": "Marv-IA",
-  "description": "Assistant IA connecté au réel - Conçu par Marvens Zamy",
+  "description": "Assistant IA connecté au réel : recherche web, GPS, mémoire, images. Conçu par Marvens Zamy.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#39FF14",
   "orientation": "portrait",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["utilities", "productivity", "education"],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Marv-IA Assistant IA"
+    }
+  ],
   "icons": [
     {
       "src": "/marvia-icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/marvia-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle conversation",
+      "short_name": "Nouveau",
+      "url": "/",
+      "icons": [{ "src": "/marvia-icon.png", "sizes": "512x512" }]
     }
   ]
 }

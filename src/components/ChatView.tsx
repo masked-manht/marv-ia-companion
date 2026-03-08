@@ -324,7 +324,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="/search actualité • Message..."
+            placeholder="/search news • /image prompt • Message..."
             rows={1}
             className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none outline-none text-[15px] max-h-32 py-1 select-text"
             style={{ minHeight: "24px" }}

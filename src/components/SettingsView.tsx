@@ -232,9 +232,9 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
 
         {/* Infos */}
         <Section icon={<Info className="w-4 h-4" />} title="Infos">
-          <Row label="Version" value="1.1.0" />
+          <Row label="Version" value="2.0.0" />
           <Row label="Développeur" value="Marvens Zamy" />
-          <Row label="Moteur" value="Marv-IA Omni-Protocol" />
+          <Row label="Moteur" value="Marv-IA Omni-Protocol v2" />
         </Section>
       </div>
     </div>

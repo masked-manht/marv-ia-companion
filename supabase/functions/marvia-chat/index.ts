@@ -191,9 +191,11 @@ serve(async (req) => {
         .replace(/\[Réponds de manière [^\]]+\]\s*/g, "")
         .trim();
 
-      // --- Auto web search when needed ---
-      if (FIRECRAWL_API_KEY && needsWebSearch(userText)) {
-        const webContext = await searchWeb(userText, FIRECRAWL_API_KEY);
+      // --- Auto web search when needed (including time queries with location) ---
+      const needsSearch = needsWebSearch(userText) || isTimeQueryWithLocation(userText);
+      if (FIRECRAWL_API_KEY && needsSearch) {
+        const searchQuery = isTimeQueryWithLocation(userText) ? `heure actuelle ${userText}` : userText;
+        const webContext = await searchWeb(searchQuery, FIRECRAWL_API_KEY);
         if (webContext) {
           webSearchUsed = true;
           enrichedMessages[enrichedMessages.length - 1] = {

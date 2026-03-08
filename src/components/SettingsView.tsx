@@ -256,6 +256,72 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           </Section>
         )}
 
+        {/* Mémoire */}
+        <Section icon={<Brain className="w-4 h-4" />} title="Mémoire">
+          <Row label="Souvenirs de l'IA" onClick={() => setMemoryOpen(!memoryOpen)}>
+            <div className="flex items-center gap-2">
+              {!memoryOpen && memories.length > 0 && (
+                <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">{memories.length}</span>
+              )}
+              <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${memoryOpen ? "rotate-90" : ""}`} />
+            </div>
+          </Row>
+          {memoryOpen && (
+            <div className="px-3 py-3 space-y-2 max-h-80 overflow-y-auto scrollbar-hide">
+              {memoryLoading && (
+                <p className="text-center text-muted-foreground text-xs py-4">Chargement...</p>
+              )}
+              {!memoryLoading && memories.length === 0 && (
+                <div className="flex flex-col items-center py-6 opacity-60">
+                  <Brain className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-xs text-muted-foreground">Aucun souvenir enregistré</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Discutez avec Marv-IA pour qu'elle apprenne à vous connaître</p>
+                </div>
+              )}
+              {memories.map((mem: any) => {
+                const catIcons: Record<string, string> = {
+                  identite: "👤", lieu: "📍", profession: "💼",
+                  preference: "⭐", projet: "📋", relation: "👥", general: "📝"
+                };
+                return (
+                  <div key={mem.id} className="flex items-start gap-2 bg-muted/50 rounded-lg p-2.5 group">
+                    <span className="text-sm flex-shrink-0">{catIcons[mem.category] || "📝"}</span>
+                    <p className="text-xs text-foreground flex-1">{mem.content}</p>
+                    <button
+                      onClick={() => handleDeleteMemory(mem.id)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {memories.length > 0 && (
+                <div className="pt-2">
+                  {confirmClearMemory ? (
+                    <div className="flex items-center gap-2 bg-destructive/10 rounded-lg p-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                      <p className="text-[10px] text-destructive flex-1">Effacer toute la mémoire ?</p>
+                      <button onClick={handleClearAllMemories} className="text-[10px] font-bold text-destructive-foreground bg-destructive px-2 py-0.5 rounded">Oui</button>
+                      <button onClick={() => setConfirmClearMemory(false)} className="text-[10px] text-muted-foreground px-1.5 py-0.5">Non</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmClearMemory(true)}
+                      className="w-full text-center text-[11px] text-destructive hover:underline py-1"
+                    >
+                      Tout effacer
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="px-4 py-2 text-[10px] text-muted-foreground">
+            Marv-IA mémorise automatiquement vos préférences et informations personnelles partagées en conversation.
+          </div>
+        </Section>
+
         {/* Corbeille */}
         <Section icon={<Trash2 className="w-4 h-4" />} title="Corbeille">
           <Row label="Conversations supprimées" onClick={() => setTrashOpen(!trashOpen)}>

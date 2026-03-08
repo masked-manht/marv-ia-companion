@@ -97,11 +97,12 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       toast("📍 Localisation désactivée");
       return;
     }
-    toast("📍 Demande d'accès à votre position...", { duration: 3000 });
+    toast("📡 Acquisition GPS haute précision...", { duration: 5000 });
     const loc = await requestLocation();
     if (loc) {
       setLocationActive(true);
-      toast.success(`📍 Position activée ! (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`, { duration: 4000 });
+      const alt = loc.altitude ? ` | Alt: ${loc.altitude.toFixed(0)}m` : "";
+      toast.success(`📡 GPS verrouillé ! Précision: ${loc.accuracy.toFixed(0)}m${alt}`, { duration: 4000 });
     } else {
       toast.error("📍 Accès refusé. Activez la localisation dans les paramètres de votre navigateur/téléphone, puis réessayez.", { duration: 6000 });
     }

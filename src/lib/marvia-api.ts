@@ -11,6 +11,7 @@ export async function streamChat({
   messages,
   model,
   timezone,
+  userId,
   onDelta,
   onDone,
   onError,
@@ -18,6 +19,7 @@ export async function streamChat({
   messages: ChatMessage[];
   model?: string;
   timezone?: string;
+  userId?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;

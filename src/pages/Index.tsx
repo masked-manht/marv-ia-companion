@@ -82,6 +82,10 @@ const Index = () => {
 
   if (!user) return <AuthPage />;
 
+  if (showPermissions) {
+    return <PermissionsRequest onComplete={() => setShowPermissions(false)} />;
+  }
+
   if (view === "ide") {
     return (
       <Suspense fallback={

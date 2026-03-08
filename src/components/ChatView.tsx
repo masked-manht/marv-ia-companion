@@ -26,7 +26,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
-  const { location, requestLocation } = useLocation();
+  const { location, error: locationError, requestLocation } = useLocation();
   const { capture } = useCamera();
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
@@ -98,20 +98,10 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       return;
     }
 
-    // Check if geolocation is available
     if (!navigator.geolocation) {
       toast.error("📍 Géolocalisation non disponible sur ce navigateur.", { duration: 5000 });
       return;
     }
-
-    // Check permission status first if available
-    try {
-      const perm = await navigator.permissions?.query({ name: "geolocation" });
-      if (perm?.state === "denied") {
-        toast.error("📍 Localisation bloquée. Allez dans les paramètres de votre navigateur → Autorisations → Localisation, puis autorisez ce site.", { duration: 8000 });
-        return;
-      }
-    } catch {}
 
     toast("📡 Acquisition GPS...", { duration: 3000 });
     const loc = await requestLocation();
@@ -120,12 +110,13 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       const alt = loc.altitude ? ` | Alt: ${loc.altitude.toFixed(0)}m` : "";
       toast.success(`📡 GPS verrouillé ! Précision: ${loc.accuracy.toFixed(0)}m${alt}`, { duration: 4000 });
     } else {
-      // Distinguish iframe restriction from actual denial
       const isIframe = window.self !== window.top;
       if (isIframe) {
-        toast.error("📍 Le GPS ne fonctionne pas dans l'aperçu. Publiez l'app et ouvrez-la directement dans votre navigateur.", { duration: 8000 });
+        toast.error("📍 Le GPS ne fonctionne pas dans l'aperçu. Installez ou ouvrez l'app depuis votre navigateur.", { duration: 8000 });
+      } else if (locationError === "denied") {
+        toast.error("📍 Localisation bloquée. Allez dans Paramètres → Localisation et autorisez ce site.", { duration: 8000 });
       } else {
-        toast.error("📍 Accès refusé. Activez la localisation dans les paramètres de votre navigateur/téléphone, puis réessayez.", { duration: 6000 });
+        toast.error("📍 Impossible d'obtenir la position. Vérifiez que le GPS est activé sur votre appareil.", { duration: 6000 });
       }
     }
   };

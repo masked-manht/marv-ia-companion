@@ -9,7 +9,8 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  // DO NOT auto skipWaiting — wait for manual trigger from user
+  // Auto-update: skip waiting immediately
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

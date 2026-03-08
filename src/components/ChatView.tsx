@@ -298,7 +298,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
               {msg.image_url && msg.role === "assistant" && (
                 <ImageBubble src={msg.image_url} caption={msg.content !== "Image générée :" ? undefined : undefined} />
               )}
-              <div className="prose prose-sm prose-invert max-w-none break-words text-[15px] leading-relaxed [&_p]:mb-1 [&_ul]:mb-1 [&_ol]:mb-1">
+              <div className="prose prose-sm prose-invert max-w-none break-words text-[15px] leading-relaxed [&_p]:mb-1 [&_ul]:mb-1 [&_ol]:mb-1 [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_pre]:rounded-lg [&_pre]:bg-background/50 [&_pre]:p-3 [&_pre]:text-xs [&_code]:break-all [&_pre_code]:break-normal [&_pre_code]:whitespace-pre-wrap [&_pre]:my-2 overflow-hidden">
                 <ReactMarkdown>{msg.content}</ReactMarkdown>
               </div>
               {msg.role === "assistant" && (

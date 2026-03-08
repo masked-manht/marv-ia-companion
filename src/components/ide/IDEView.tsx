@@ -4,6 +4,7 @@ import CodeEditor from "./CodeEditor";
 import LivePreview from "./LivePreview";
 import ConsolePanel, { type ConsoleMessage } from "./ConsolePanel";
 import FileTabs, { type FileTab } from "./FileTabs";
+import { executePython } from "./pythonSimulator";
 import ReactMarkdown from "react-markdown";
 import { streamChat } from "@/lib/marvia-api";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -14,6 +15,7 @@ const DEFAULT_FILES: FileTab[] = [
   { id: "html", name: "index.html", language: "html", content: '<!-- Écrivez votre HTML ici -->\n<div class="container">\n  <h1>Hello Marv-IA 🚀</h1>\n  <p>Bienvenue dans le Mode IDE</p>\n  <button onclick="greet()">Cliquez-moi</button>\n</div>' },
   { id: "css", name: "style.css", language: "css", content: '/* Styles */\n.container {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  min-height: 80vh;\n  gap: 16px;\n  font-family: system-ui, sans-serif;\n}\n\nh1 {\n  font-size: 2rem;\n  background: linear-gradient(135deg, #007BFF, #39FF14);\n  -webkit-background-clip: text;\n  -webkit-text-fill-color: transparent;\n}\n\nbutton {\n  padding: 10px 24px;\n  background: #007BFF;\n  color: white;\n  border: none;\n  border-radius: 8px;\n  font-size: 1rem;\n  cursor: pointer;\n  transition: transform 0.2s;\n}\n\nbutton:hover {\n  transform: scale(1.05);\n}' },
   { id: "js", name: "script.js", language: "javascript", content: '// JavaScript\nfunction greet() {\n  console.log("Bonjour depuis Marv-IA IDE ! 🎉");\n  document.querySelector("h1").textContent = "Ça marche !";\n}' },
+  { id: "py", name: "main.py", language: "python", content: '# Python - Simulateur Marv-IA\n\n# Variables et types\nnom = "Marv-IA"\nversion = 2.0\nactif = True\n\nprint(f"Bienvenue dans {nom} v{version}")\nprint(f"Statut: {actif}")\n\n# Boucle et conditions\nfor i in range(5):\n    if i % 2 == 0:\n        print(f"{i} est pair")\n    else:\n        print(f"{i} est impair")\n\n# Fonctions\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    a = 0\n    b = 1\n    for i in range(2, n + 1):\n        temp = a + b\n        a = b\n        b = temp\n    return b\n\nprint(f"Fibonacci(10) = {fibonacci(10)}")\n\n# Listes\nfruits = ["pomme", "banane", "orange"]\nfruits.append("kiwi")\nprint(f"Fruits: {fruits}")\nprint(f"Nombre: {len(fruits)}")\n' },
 ];
 
 type ChatMsg = { id: string; role: "user" | "assistant"; content: string };
@@ -47,6 +49,8 @@ export default function IDEView({ onBack }: IDEViewProps) {
   const htmlFile = files.find(f => f.language === "html");
   const cssFile = files.find(f => f.language === "css");
   const jsFile = files.find(f => f.language === "javascript");
+  const pyFile = files.find(f => f.language === "python");
+  const isPythonActive = activeFile.language === "python";
 
   const updateFileContent = useCallback((content: string) => {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content } : f));
@@ -69,12 +73,13 @@ export default function IDEView({ onBack }: IDEViewProps) {
     if (activeFileId === id) setActiveFileId(files[0].id === id ? files[1].id : files[0].id);
   };
 
-  const handleInjectCode = (code: string) => {
-    // Detect language from code content
+  const handleInjectCode = (code: string, lang?: string) => {
     let targetFile = activeFile;
-    if (code.includes("<") && code.includes(">") && (code.includes("<div") || code.includes("<h1") || code.includes("<p") || code.includes("<!") || code.includes("<section"))) {
+    if (lang === "python" || (code.includes("def ") && code.includes("print("))) {
+      targetFile = pyFile || activeFile;
+    } else if (lang === "html" || (code.includes("<") && code.includes(">") && (code.includes("<div") || code.includes("<h1") || code.includes("<p") || code.includes("<!") || code.includes("<section")))) {
       targetFile = htmlFile || activeFile;
-    } else if (code.includes("{") && (code.includes("color:") || code.includes("display:") || code.includes("background") || code.includes("font-"))) {
+    } else if (lang === "css" || (code.includes("{") && (code.includes("color:") || code.includes("display:") || code.includes("background") || code.includes("font-")))) {
       targetFile = cssFile || activeFile;
     } else {
       targetFile = jsFile || activeFile;
@@ -83,6 +88,17 @@ export default function IDEView({ onBack }: IDEViewProps) {
     setActiveFileId(targetFile.id);
     toast.success(`Code injecté dans ${targetFile.name}`);
   };
+
+  const handleRunPython = useCallback(() => {
+    const pythonFile = files.find(f => f.language === "python");
+    if (!pythonFile) { toast.error("Aucun fichier Python trouvé"); return; }
+    const now = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const results = executePython(pythonFile.content);
+    const newMessages: ConsoleMessage[] = results.map(r => ({ type: r.type, text: r.text, time: now() }));
+    setConsoleMessages(prev => [...prev, ...newMessages]);
+    setRightPanel("console");
+    toast.success("Python exécuté !");
+  }, [files]);
 
   const handleVoice = () => {
     if (isListening) { stopListeningRef.current?.(); setIsListening(false); return; }
@@ -206,6 +222,16 @@ ${jsFile?.content || ""}
           <span className="text-[10px] bg-[#007BFF]/15 text-[#007BFF] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">IDE</span>
         </div>
         <div className="flex items-center gap-1">
+          {isPythonActive && (
+            <button
+              onClick={handleRunPython}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#39FF14]/15 text-[#39FF14] rounded-md hover:bg-[#39FF14]/25 transition-colors"
+              title="Exécuter Python"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Run
+            </button>
+          )}
           <button
             onClick={() => setChatOpen(!chatOpen)}
             className="p-1.5 text-[#4A5568] hover:text-[#E2E8F0] transition-colors"
@@ -265,7 +291,7 @@ ${jsFile?.content || ""}
                         {extractCodeBlocks(msg.content).map((block, i) => (
                           <button
                             key={i}
-                            onClick={() => handleInjectCode(block.code)}
+                            onClick={() => handleInjectCode(block.code, block.lang)}
                             className="flex items-center gap-1 text-[10px] bg-[#007BFF]/15 text-[#007BFF] px-2 py-1 rounded-md hover:bg-[#007BFF]/25 transition-colors font-medium"
                           >
                             <Code2 className="w-2.5 h-2.5" />
@@ -367,8 +393,17 @@ ${jsFile?.content || ""}
                   )}
                 </button>
                 <div className="flex-1" />
+                {isPythonActive && (
+                  <button
+                    onClick={handleRunPython}
+                    className="flex items-center gap-1 px-2 py-1 mx-1 text-[10px] font-medium bg-[#39FF14]/15 text-[#39FF14] rounded hover:bg-[#39FF14]/25 transition-colors"
+                  >
+                    <Play className="w-3 h-3" />
+                    Python
+                  </button>
+                )}
                 <button
-                  onClick={() => { /* Force re-render preview */ setFiles(prev => [...prev]); }}
+                  onClick={() => { setFiles(prev => [...prev]); }}
                   className="px-2 py-2 text-[#4A5568] hover:text-[#39FF14] transition-colors"
                   title="Relancer"
                 >

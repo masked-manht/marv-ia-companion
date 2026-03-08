@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2 } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";

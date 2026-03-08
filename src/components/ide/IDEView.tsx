@@ -281,7 +281,7 @@ ${jsFile?.content || ""}
                         {extractCodeBlocks(msg.content).map((block, i) => (
                           <button
                             key={i}
-                            onClick={() => handleInjectCode(block.code)}
+                            onClick={() => handleInjectCode(block.code, block.lang)}
                             className="flex items-center gap-1 text-[10px] bg-[#007BFF]/15 text-[#007BFF] px-2 py-1 rounded-md hover:bg-[#007BFF]/25 transition-colors font-medium"
                           >
                             <Code2 className="w-2.5 h-2.5" />

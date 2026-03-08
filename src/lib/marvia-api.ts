@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-chat`;
+const MEMORY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-memory`;
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-image`;
 const SEARCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-search`;
 

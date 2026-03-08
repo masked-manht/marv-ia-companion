@@ -4,6 +4,7 @@ import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
 import SettingsView from "@/components/SettingsView";
+import TrashView from "@/components/TrashView";
 import CreditsDisplay from "@/components/CreditsDisplay";
 import AuthPage from "@/components/AuthPage";
 import SplashScreen from "@/components/SplashScreen";
@@ -17,7 +18,7 @@ import { toast } from "sonner";
 
 const IDEView = lazy(() => import("@/components/ide/IDEView"));
 
-type View = "chat" | "pro" | "settings" | "ide";
+type View = "chat" | "pro" | "settings" | "ide" | "trash";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -40,13 +41,14 @@ const Index = () => {
 
   const handleNewConversation = () => {
     setActiveConversationId(null);
-    if (view === "settings") setView("chat");
+    if (view === "settings" || view === "trash") setView("chat");
   };
 
   const handleDeleteConversation = async (id: string) => {
     const error = await deleteConversation(id);
     if (error) { toast.error("Erreur de suppression"); return; }
     if (activeConversationId === id) setActiveConversationId(null);
+    toast.success("Conversation déplacée dans la corbeille");
     loadConversations();
   };
 
@@ -89,6 +91,10 @@ const Index = () => {
 
   if (view === "settings") {
     return <SettingsView onBack={() => setView("chat")} credits={credits} />;
+  }
+
+  if (view === "trash") {
+    return <TrashView onBack={() => setView("chat")} onRestored={loadConversations} />;
   }
 
   if (view === "pro") {
@@ -168,6 +174,7 @@ const Index = () => {
         onNew={handleNewConversation}
         onDelete={handleDeleteConversation}
         onOpenSettings={() => setView("settings")}
+        onOpenTrash={() => setView("trash")}
       />
     </div>
   );

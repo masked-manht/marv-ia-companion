@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ArrowLeft, Play, Eye, Code2, Terminal, Sparkles, Send, Mic, StopCircle, Download, RotateCcw, MessageSquare, X, ChevronUp } from "lucide-react";
 import CodeEditor from "./CodeEditor";
 import LivePreview from "./LivePreview";
@@ -208,6 +208,23 @@ ${jsFile?.content || ""}
   };
 
   // --- Chat Panel (reusable for both desktop sidebar & mobile fullscreen) ---
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Handle mobile keyboard: adjust layout when virtual keyboard opens
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      if (chatInputRef.current && document.activeElement === chatInputRef.current) {
+        requestAnimationFrame(() => {
+          chatInputRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+
   const ChatPanel = ({ className = "" }: { className?: string }) => (
     <div className={`flex flex-col ${className}`}>
       <div className="px-3 py-2.5 border-b border-[#1E2433] flex items-center gap-2 flex-shrink-0">
@@ -265,9 +282,15 @@ ${jsFile?.content || ""}
       <div className="p-2 border-t border-[#1E2433] flex-shrink-0">
         <div className="flex items-end gap-1.5 bg-[#1A1F2E] rounded-xl px-3 py-2 border border-[#1E2433]">
           <textarea
+            ref={chatInputRef}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+            onFocus={(e) => {
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 300);
+            }}
             placeholder="Demandez du code..."
             rows={1}
             className="flex-1 bg-transparent text-[#E2E8F0] placeholder:text-[#4A5568] resize-none outline-none text-[13px] max-h-20 py-0.5"

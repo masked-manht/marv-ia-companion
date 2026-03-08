@@ -162,6 +162,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               status={locationStatus}
               onAllow={requestLocation}
               onSkip={() => skipStep("camera")}
+              requesting={requesting}
             />
           )}
 
@@ -173,6 +174,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               status={cameraStatus}
               onAllow={requestCamera}
               onSkip={() => skipStep("notifications")}
+              requesting={requesting}
             />
           )}
 
@@ -184,6 +186,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               status={notifStatus}
               onAllow={requestNotifications}
               onSkip={() => setStep("done")}
+              requesting={requesting}
             />
           )}
 

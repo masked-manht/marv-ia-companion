@@ -132,7 +132,7 @@ ${convText}`;
                     items: {
                       type: "object",
                       properties: {
-                        category: { type: "string", enum: ["identite", "lieu", "profession", "preference", "projet", "relation"] },
+                        category: { type: "string", enum: ["identite", "lieu", "profession", "preference", "projet", "relation", "style", "humeur"] },
                         content: { type: "string" }
                       },
                       required: ["category", "content"],

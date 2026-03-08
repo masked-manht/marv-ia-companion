@@ -22,7 +22,7 @@ interface ChatViewProps {
 
 const FREE_MODELS = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
 
-export default function ChatView({ conversationId, onConversationCreated }: ChatViewProps) {
+export default function ChatView({ conversationId, onConversationCreated, credits, onConsumeCredit, onRefreshCredits }: ChatViewProps) {
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();

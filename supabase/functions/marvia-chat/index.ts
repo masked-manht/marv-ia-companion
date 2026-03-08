@@ -106,7 +106,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: MARVIA_SYSTEM_PROMPT },
+          { role: "system", content: buildSystemPrompt() },
           ...enrichedMessages,
         ],
         stream: true,

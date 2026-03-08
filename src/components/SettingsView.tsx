@@ -448,7 +448,26 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
             </select>
           </Row>
           <Row label="Effacer le cache">
-            <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="text-xs text-primary hover:underline">Effacer</button>
+            <button onClick={async () => {
+              // Clear caches without logging out
+              if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+              }
+              // Clear only non-auth localStorage items
+              const authKeys: string[] = [];
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+                  authKeys.push(key);
+                }
+              }
+              const saved = authKeys.map(k => [k, localStorage.getItem(k)!]);
+              localStorage.clear();
+              saved.forEach(([k, v]) => localStorage.setItem(k, v));
+              toast.success("Cache vidé ! L'app sera plus rapide.");
+              window.location.reload();
+            }} className="text-xs text-primary hover:underline">Effacer</button>
           </Row>
         </Section>
 

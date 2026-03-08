@@ -23,6 +23,7 @@ const Index = () => {
   const { user, loading } = useAuth();
   const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
   const { isSpeaking, stopSpeaking } = useVoice();
+  const { ideMode } = useSettings();
   const [view, setView] = useState<View>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<any[]>([]);

@@ -15,6 +15,9 @@ type UIMessage = ChatMessage & { id: string };
 interface ChatViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
+  credits: number;
+  onConsumeCredit: () => Promise<boolean>;
+  onRefreshCredits: () => void;
 }
 
 const FREE_MODELS = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"];

@@ -12,6 +12,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
   const [locationStatus, setLocationStatus] = useState<"pending" | "granted" | "denied">("pending");
   const [cameraStatus, setCameraStatus] = useState<"pending" | "granted" | "denied">("pending");
   const [notifStatus, setNotifStatus] = useState<"pending" | "granted" | "denied">("pending");
+  const [requesting, setRequesting] = useState(false);
 
   // Check existing permissions on mount
   useEffect(() => {
@@ -33,19 +34,35 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
     })();
   }, []);
 
+  const handleFinish = () => {
+    localStorage.setItem("marvia-permissions-asked", "true");
+    onComplete();
+  };
+
+  // Auto-advance if already granted
+  const advanceTo = (next: PermStep) => {
+    if (next === "location" && locationStatus === "granted") return advanceTo("camera");
+    if (next === "camera" && cameraStatus === "granted") return advanceTo("notifications");
+    if (next === "notifications" && notifStatus === "granted") return advanceTo("done");
+    setStep(next);
+  };
+
   const requestLocation = async () => {
+    setRequesting(true);
     try {
       await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 15000, enableHighAccuracy: false, maximumAge: 60000 });
       });
       setLocationStatus("granted");
     } catch {
       setLocationStatus("denied");
     }
-    setStep("camera");
+    setRequesting(false);
+    advanceTo("camera");
   };
 
   const requestCamera = async () => {
+    setRequesting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach(t => t.stop());
@@ -53,35 +70,30 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
     } catch {
       setCameraStatus("denied");
     }
-    setStep("notifications");
+    setRequesting(false);
+    advanceTo("notifications");
   };
 
   const requestNotifications = async () => {
+    setRequesting(true);
     if ("Notification" in window) {
       const result = await Notification.requestPermission();
       setNotifStatus(result === "granted" ? "granted" : "denied");
       if (result === "granted") {
         try {
           const reg = await navigator.serviceWorker.ready;
-          reg.showNotification("Marv-IA", {
-            body: "Notifications activées ! 🎉",
-            icon: "/marvia-icon.png",
-          } as any);
+          reg.showNotification("Marv-IA", { body: "Notifications activées ! 🎉", icon: "/marvia-icon.png" } as any);
         } catch {
           try { new Notification("Marv-IA", { body: "Notifications activées ! 🎉", icon: "/marvia-icon.png" }); } catch {}
         }
       }
     }
+    setRequesting(false);
     setStep("done");
   };
 
-  const handleFinish = () => {
-    localStorage.setItem("marvia-permissions-asked", "true");
-    onComplete();
-  };
-
   const skipStep = (next: PermStep) => {
-    setStep(next);
+    advanceTo(next);
   };
 
   const StatusDot = ({ status }: { status: "pending" | "granted" | "denied" }) => (

@@ -221,6 +221,7 @@ serve(async (req) => {
         let locationContext = "";
 
         // Reverse geocoding
+        let addr: any = {};
         try {
           const geoResp = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=fr&addressdetails=1&zoom=18`,
@@ -228,7 +229,7 @@ serve(async (req) => {
           );
           if (geoResp.ok) {
             const geoData = await geoResp.json();
-            const addr = geoData.address || {};
+            addr = geoData.address || {};
             const details = [
               addr.house_number && addr.road ? `${addr.house_number} ${addr.road}` : addr.road,
               addr.neighbourhood || addr.quarter, addr.suburb,
@@ -247,6 +248,42 @@ serve(async (req) => {
           }
         } catch {
           locationContext = `📍 Position GPS : ${lat}, ${lon}`;
+        }
+
+        // --- Web search to find exact sub-district/section (e.g. Delmas 83) ---
+        const road = addr.road || "";
+        const commune = addr.municipality || addr.town || addr.village || addr.city || "";
+        const country = addr.country || "";
+        if (FIRECRAWL_API_KEY && road && commune) {
+          try {
+            const subQuery = `"${road}" ${commune} ${country} quartier section numéro`;
+            console.log("Sub-district search:", subQuery);
+            const subResp = await fetch("https://api.firecrawl.dev/v1/search", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${FIRECRAWL_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ query: subQuery, limit: 3, scrapeOptions: { formats: ["markdown"] } }),
+            });
+            if (subResp.ok) {
+              const subData = await subResp.json();
+              const subResults = subData?.data || [];
+              if (subResults.length > 0) {
+                let subContext = "\n\n🔍 RECHERCHE WEB - SECTION/QUARTIER EXACT :\n";
+                subResults.forEach((r: any, i: number) => {
+                  const content = r.markdown || r.content || r.description || "";
+                  if (content) {
+                    subContext += `Source ${i + 1} (${r.url || "N/A"}): ${content.slice(0, 500)}\n`;
+                  }
+                });
+                subContext += "\n⚠️ Utilise ces résultats pour identifier le numéro de section exact (ex: Delmas 83, Tabarre 27). Si aucun résultat ne confirme un numéro précis, ne mentionne PAS de numéro.";
+                locationContext += subContext;
+              }
+            }
+          } catch (e) {
+            console.error("Sub-district search error:", e);
+          }
         }
 
         // Nearby POIs

@@ -28,6 +28,8 @@ type SettingsContextType = {
   setAiModel: (m: AIModel) => void;
   accentColor: AccentColor;
   setAccentColor: (c: AccentColor) => void;
+  ideMode: boolean;
+  setIdeMode: (v: boolean) => void;
 };
 
 const SettingsContext = createContext<SettingsContextType>({} as SettingsContextType);

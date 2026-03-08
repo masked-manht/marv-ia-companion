@@ -226,9 +226,9 @@ function PermRow({ icon, title, desc, status }: { icon: React.ReactNode; title: 
   );
 }
 
-function PermPrompt({ icon, title, desc, status, onAllow, onSkip }: {
+function PermPrompt({ icon, title, desc, status, onAllow, onSkip, requesting }: {
   icon: React.ReactNode; title: string; desc: string;
-  status: "pending" | "granted" | "denied"; onAllow: () => void; onSkip: () => void;
+  status: "pending" | "granted" | "denied"; onAllow: () => void; onSkip: () => void; requesting?: boolean;
 }) {
   return (
     <div className="text-center space-y-4">
@@ -244,10 +244,14 @@ function PermPrompt({ icon, title, desc, status, onAllow, onSkip }: {
         </div>
       ) : (
         <div className="space-y-2">
-          <button onClick={onAllow} className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">
-            Autoriser
+          <button
+            onClick={onAllow}
+            disabled={requesting}
+            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+          >
+            {requesting ? "⏳ En attente..." : "Autoriser"}
           </button>
-          <button onClick={onSkip} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+          <button onClick={onSkip} disabled={requesting} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1 disabled:opacity-40">
             Plus tard
           </button>
         </div>

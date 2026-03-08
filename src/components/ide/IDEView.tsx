@@ -73,12 +73,13 @@ export default function IDEView({ onBack }: IDEViewProps) {
     if (activeFileId === id) setActiveFileId(files[0].id === id ? files[1].id : files[0].id);
   };
 
-  const handleInjectCode = (code: string) => {
-    // Detect language from code content
+  const handleInjectCode = (code: string, lang?: string) => {
     let targetFile = activeFile;
-    if (code.includes("<") && code.includes(">") && (code.includes("<div") || code.includes("<h1") || code.includes("<p") || code.includes("<!") || code.includes("<section"))) {
+    if (lang === "python" || (code.includes("def ") && code.includes("print("))) {
+      targetFile = pyFile || activeFile;
+    } else if (lang === "html" || (code.includes("<") && code.includes(">") && (code.includes("<div") || code.includes("<h1") || code.includes("<p") || code.includes("<!") || code.includes("<section")))) {
       targetFile = htmlFile || activeFile;
-    } else if (code.includes("{") && (code.includes("color:") || code.includes("display:") || code.includes("background") || code.includes("font-"))) {
+    } else if (lang === "css" || (code.includes("{") && (code.includes("color:") || code.includes("display:") || code.includes("background") || code.includes("font-")))) {
       targetFile = cssFile || activeFile;
     } else {
       targetFile = jsFile || activeFile;
@@ -87,6 +88,17 @@ export default function IDEView({ onBack }: IDEViewProps) {
     setActiveFileId(targetFile.id);
     toast.success(`Code injecté dans ${targetFile.name}`);
   };
+
+  const handleRunPython = useCallback(() => {
+    const pythonFile = files.find(f => f.language === "python");
+    if (!pythonFile) { toast.error("Aucun fichier Python trouvé"); return; }
+    const now = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const results = executePython(pythonFile.content);
+    const newMessages: ConsoleMessage[] = results.map(r => ({ type: r.type, text: r.text, time: now() }));
+    setConsoleMessages(prev => [...prev, ...newMessages]);
+    setRightPanel("console");
+    toast.success("Python exécuté !");
+  }, [files]);
 
   const handleVoice = () => {
     if (isListening) { stopListeningRef.current?.(); setIsListening(false); return; }

@@ -268,6 +268,11 @@ ${jsFile?.content || ""}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+            onFocus={(e) => {
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 300);
+            }}
             placeholder="Demandez du code..."
             rows={1}
             className="flex-1 bg-transparent text-[#E2E8F0] placeholder:text-[#4A5568] resize-none outline-none text-[13px] max-h-20 py-0.5"

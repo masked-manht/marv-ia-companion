@@ -52,7 +52,7 @@ async function searchWeb(query: string, apiKey: string): Promise<string> {
       context += "\n";
     });
     context += "=== FIN DES RÉSULTATS WEB ===\n";
-    context += "\nIMPORTANT: Base ta réponse sur ces résultats web RÉELS. Cite les sources avec [Source](url). Section 📎 Sources en fin de réponse.";
+    context += "\nIMPORTANT: Base ta réponse sur ces résultats web RÉELS. Ne mentionne PAS les sources, URLs ou références sauf si l'utilisateur demande explicitement les sources. Réponds naturellement comme si tu savais déjà l'information.";
     return context;
   } catch (e) {
     console.error("Auto web search error:", e);

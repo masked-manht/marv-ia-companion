@@ -12,7 +12,7 @@ export function useServiceWorker() {
     toastShownRef.current = true;
     toast("⚠️ Nouvelle mise à jour disponible !", {
       description: "Rendez-vous dans Paramètres → Technique → Installer la mise à jour.",
-      duration: 10000,
+      duration: Infinity,
       action: {
         label: "OK",
         onClick: () => {},
@@ -44,18 +44,19 @@ export function useServiceWorker() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    // Register SW if not already registered
     navigator.serviceWorker.register("/sw.js").then((reg) => {
       setRegistration(reg);
 
-      // Check if there's already a waiting worker
+      // Immediately check if there's a waiting worker
       if (reg.waiting) {
         setUpdateAvailable(true);
         showUpdateToast();
         sendUpdateNotification();
       }
 
-      // Listen for new service worker installations
+      // Also proactively check for updates on every app open
+      reg.update().catch(() => {});
+
       reg.addEventListener("updatefound", () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
@@ -71,6 +72,16 @@ export function useServiceWorker() {
       console.warn("SW registration failed:", err);
     });
 
+    // Also check existing registration
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        setUpdateAvailable(true);
+        setRegistration(reg);
+        showUpdateToast();
+        sendUpdateNotification();
+      }
+    });
+
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       window.location.reload();
     });
@@ -83,7 +94,6 @@ export function useServiceWorker() {
 
   const checkForUpdate = useCallback(async () => {
     if (!registration) {
-      // No SW registered yet, try to get one
       try {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) {
@@ -95,10 +105,9 @@ export function useServiceWorker() {
     }
 
     setChecking(true);
-    toastShownRef.current = false; // Allow toast to show again on manual check
+    toastShownRef.current = false;
     try {
       await registration.update();
-      // Wait for updatefound to trigger
       await new Promise((r) => setTimeout(r, 2000));
       const hasUpdate = !!registration.waiting;
       setUpdateAvailable(hasUpdate);

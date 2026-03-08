@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marvia-v1.4';
+const CACHE_NAME = 'marvia-v1.5';
 const PRECACHE_URLS = [
   '/',
   '/marvia-icon.png',
@@ -9,8 +9,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  // Auto-update: skip waiting immediately
-  self.skipWaiting();
+  // DO NOT auto skipWaiting — wait for manual trigger from user
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,7 +21,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Also support manual SKIP_WAITING for backwards compat
+// Manual SKIP_WAITING triggered from Settings
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') {
     self.skipWaiting();

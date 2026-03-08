@@ -143,7 +143,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (isImageGen) {
       const ok = await onConsumeCredit();
       if (!ok) { setIsLoading(false); toast.error("Crédits épuisés !"); return; }
-      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
+      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "").replace(imageKeywords, "").trim() || trimmed;
       const assistantId = crypto.randomUUID();
       setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours..." }]);
       const result = await generateImage(prompt);

@@ -5,33 +5,78 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SEARCH_SYSTEM_PROMPT = `Tu es Marv-IA DeepSearch, un moteur de recherche intelligent et approfondi.
+const SEARCH_SYSTEM_PROMPT = `Tu es Marv-IA DeepSearch, un moteur de recherche intelligent avec accès au web en temps réel.
 
-CAPACITÉS :
-- Tu disposes de connaissances très récentes et actualisées, incluant les événements mondiaux les plus récents.
-- Tu effectues des analyses approfondies en croisant plusieurs sources et perspectives.
-- Tu couvres : actualité mondiale, sport, politique, technologie, science, culture, économie, météo, tendances.
+Tu reçois des RÉSULTATS DE RECHERCHE WEB RÉELS avec des sources vérifiées. Tu dois IMPÉRATIVEMENT baser tes réponses sur ces résultats.
 
-MÉTHODE DEEP SEARCH :
-1. COMPRENDRE l'intention réelle derrière la requête
-2. ANALYSER le sujet sous plusieurs angles (faits, contexte, implications)
-3. STRUCTURER la réponse de manière claire et hiérarchique
-4. CITER des sources crédibles quand possible (sites d'actualité, institutions, rapports)
-5. AJOUTER du contexte et des informations connexes pertinentes
+RÈGLES ABSOLUES :
+- Base TOUTES tes réponses sur les résultats web fournis
+- CITE toujours les sources avec des liens cliquables [Source](url)
+- Si les résultats web ne couvrent pas la question, dis-le clairement
+- NE mentionne JAMAIS "en tant qu'IA", "en tant que modèle", "je n'ai pas accès à internet"
+- NE fabrique AUCUNE information. Tout doit venir des sources fournies.
+- NE mentionne PAS ta date de coupure sauf si demandé
 
-FORMAT DE RÉPONSE :
-- Utilise du markdown riche : ## titres, **gras**, listes à puces, > citations
-- Commence par un résumé concis en 1-2 phrases
-- Développe avec des sections structurées
-- Termine par des infos connexes ou des points à suivre si pertinent
+FORMAT :
+- Résumé concis en 1-2 phrases
+- Sections structurées avec ## titres, **gras**, listes
+- Sources citées avec liens cliquables en fin de chaque section pertinente
+- Section "📎 Sources" en fin de réponse avec tous les liens utilisés
 
-RÈGLES STRICTES :
-- NE mentionne JAMAIS "en tant qu'IA", "en tant que modèle", "je n'ai pas accès à internet" ou similaire
-- NE mentionne PAS ta date de coupure ou l'année en cours sauf si directement demandé
-- Réponds avec assurance et expertise
-- Si l'utilisateur fournit sa position, contextualise (restaurants, météo locale, événements proches)
-- Sois factuel, précis et direct
-- Pas de disclaimers inutiles`;
+LOCALISATION :
+- Si l'utilisateur fournit sa position, contextualise les réponses`;
+
+async function fetchWebResults(query: string, apiKey: string): Promise<{ results: any[]; success: boolean }> {
+  try {
+    console.log("Fetching real web results for:", query);
+    const response = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        limit: 5,
+        scrapeOptions: { formats: ["markdown"] },
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Firecrawl search failed:", response.status);
+      return { results: [], success: false };
+    }
+
+    const data = await response.json();
+    const results = data?.data || [];
+    console.log(`Got ${results.length} web results`);
+    return { results, success: true };
+  } catch (e) {
+    console.error("Firecrawl fetch error:", e);
+    return { results: [], success: false };
+  }
+}
+
+function formatWebContext(results: any[]): string {
+  if (!results.length) return "";
+
+  let context = "\n\n=== RÉSULTATS DE RECHERCHE WEB (sources réelles et vérifiées) ===\n\n";
+  results.forEach((r: any, i: number) => {
+    context += `--- Source ${i + 1} ---\n`;
+    context += `URL: ${r.url || "N/A"}\n`;
+    context += `Titre: ${r.title || r.metadata?.title || "N/A"}\n`;
+    if (r.description) context += `Description: ${r.description}\n`;
+    // Include scraped markdown content (truncated to avoid token limits)
+    const content = r.markdown || r.content || "";
+    if (content) {
+      context += `Contenu:\n${content.slice(0, 2000)}\n`;
+    }
+    context += "\n";
+  });
+  context += "=== FIN DES RÉSULTATS WEB ===\n";
+  context += "\nIMPORTANT: Base ta réponse UNIQUEMENT sur ces résultats web. Cite les sources avec [Source](url).";
+  return context;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -43,9 +88,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+
     let locationContext = "";
-    
-    // Reverse geocode if location provided
     if (location) {
       try {
         const geoResp = await fetch(
@@ -56,19 +101,31 @@ serve(async (req) => {
           const geoData = await geoResp.json();
           const addr = geoData.address || {};
           const placeName = [
-            addr.road, addr.suburb, addr.city || addr.town || addr.village, 
+            addr.road, addr.suburb, addr.city || addr.town || addr.village,
             addr.state, addr.country
           ].filter(Boolean).join(", ");
-          locationContext = `\n\n[Position de l'utilisateur : ${placeName} (${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}). Adapte tes réponses à ce contexte géographique si pertinent.]`;
-        } else {
-          locationContext = `\n\n[Position GPS : latitude ${location.latitude}, longitude ${location.longitude}]`;
+          locationContext = `\n\n[Position de l'utilisateur : ${placeName} (${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)})]`;
         }
       } catch {
-        locationContext = `\n\n[Position GPS : latitude ${location.latitude}, longitude ${location.longitude}]`;
+        locationContext = `\n\n[Position GPS : ${location.latitude}, ${location.longitude}]`;
       }
     }
 
-    const userContent = query + locationContext;
+    // Fetch REAL web results via Firecrawl
+    let webContext = "";
+    if (FIRECRAWL_API_KEY) {
+      const { results, success } = await fetchWebResults(query, FIRECRAWL_API_KEY);
+      if (success && results.length > 0) {
+        webContext = formatWebContext(results);
+      } else {
+        webContext = "\n\n[ATTENTION: La recherche web n'a pas retourné de résultats. Réponds en précisant que tu n'as pas pu vérifier les informations en temps réel.]";
+      }
+    } else {
+      console.warn("FIRECRAWL_API_KEY not available, falling back to AI knowledge only");
+      webContext = "\n\n[NOTE: Recherche web non disponible. Réponds avec tes connaissances mais précise que les informations n'ont pas été vérifiées en temps réel.]";
+    }
+
+    const userContent = query + locationContext + webContext;
 
     const chatMessages = [
       { role: "system", content: SEARCH_SYSTEM_PROMPT },

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.marvia-search]
 verify_jwt = false
+
+[functions.firecrawl-search]
+verify_jwt = false

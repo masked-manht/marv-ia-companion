@@ -1,9 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 
 export function useServiceWorker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [checking, setChecking] = useState(false);
+
+  const showUpdateToast = () => {
+    toast("⚠️ Nouvelle mise à jour disponible !", {
+      description: "Rendez-vous dans Paramètres → Technique → Installer la mise à jour.",
+      duration: 10000,
+      action: {
+        label: "OK",
+        onClick: () => {},
+      },
+    });
+  };
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -12,10 +24,10 @@ export function useServiceWorker() {
       if (!reg) return;
       setRegistration(reg);
 
-      // Check if update already waiting
       if (reg.waiting) {
         setUpdateAvailable(true);
         sendUpdateNotification();
+        showUpdateToast();
       }
 
       reg.addEventListener("updatefound", () => {
@@ -24,14 +36,13 @@ export function useServiceWorker() {
         newWorker.addEventListener("statechange", () => {
           if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
             setUpdateAvailable(true);
-            // Send notification instead of auto-applying
             sendUpdateNotification();
+            showUpdateToast();
           }
         });
       });
     });
 
-    // Reload when new service worker takes over (only after manual apply)
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       window.location.reload();
     });
@@ -41,7 +52,7 @@ export function useServiceWorker() {
     if ("Notification" in window && Notification.permission === "granted") {
       navigator.serviceWorker.ready.then((reg) => {
         reg.showNotification("Marv-IA", {
-          body: "🚀 Une nouvelle mise à jour est disponible ! Ouvrez les paramètres pour l'installer.",
+          body: "⚠️ Une nouvelle mise à jour est disponible ! Ouvrez les paramètres pour l'installer.",
           icon: "/marvia-icon.png",
           badge: "/marvia-icon.png",
           tag: "marvia-update",
@@ -50,7 +61,7 @@ export function useServiceWorker() {
       }).catch(() => {
         try {
           new Notification("Marv-IA", {
-            body: "🚀 Une nouvelle mise à jour est disponible !",
+            body: "⚠️ Une nouvelle mise à jour est disponible !",
             icon: "/marvia-icon.png",
           });
         } catch { /* ignore */ }

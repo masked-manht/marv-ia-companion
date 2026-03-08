@@ -7,17 +7,30 @@ const corsHeaders = {
 
 const MARVIA_VERSION = "1.1.0";
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(timezone?: string): string {
+  const tz = timezone || "UTC";
+  // Build date/time in user's local timezone
   const now = new Date();
-  const jours = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-  const mois = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-  const dateStr = `${jours[now.getDay()]} ${now.getDate()} ${mois[now.getMonth()]} ${now.getFullYear()}`;
-  const heureStr = `${now.getHours()}h${String(now.getMinutes()).padStart(2,"0")}`;
+  const formatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: tz,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const timeFormatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateStr = formatter.format(now);
+  const heureStr = timeFormatter.format(now).replace(":", "h");
 
   return `Tu es Marv-IA v${MARVIA_VERSION}, un assistant intelligent de dernière génération, alimenté par les modèles IA les plus avancés.
 
 DATE ET HEURE ACTUELLES :
-- Nous sommes le ${dateStr}, il est ${heureStr} (UTC).
+- Nous sommes le ${dateStr}, il est ${heureStr} (heure locale de l'utilisateur, fuseau : ${tz}).
 - Tu connais cette date avec certitude. Ne dis JAMAIS que tu ne connais pas la date actuelle.
 - Si on te demande la date, le jour ou l'heure, utilise ces informations.
 - Tu peux discuter d'événements jusqu'à aujourd'hui inclus.
@@ -93,7 +106,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model } = await req.json();
+    const { messages, model, timezone } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -252,7 +265,7 @@ out body 25;`;
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: buildSystemPrompt() },
+          { role: "system", content: buildSystemPrompt(timezone) },
           ...enrichedMessages,
         ],
         stream: true,

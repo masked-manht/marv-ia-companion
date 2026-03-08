@@ -9,24 +9,27 @@ export type ChatMessage = { role: "user" | "assistant"; content: string; image_u
 export async function streamChat({
   messages,
   model,
+  timezone,
   onDelta,
   onDone,
   onError,
 }: {
   messages: ChatMessage[];
   model?: string;
+  timezone?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
 }) {
   try {
+    const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, model }),
+      body: JSON.stringify({ messages, model, timezone: tz }),
     });
 
     if (!resp.ok) {

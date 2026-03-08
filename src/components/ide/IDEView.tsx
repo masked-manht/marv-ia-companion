@@ -396,7 +396,7 @@ ${jsFile?.content || ""}
             <ConsolePanel messages={consoleMessages} onClear={() => setConsoleMessages([])} />
           )}
           {mobileTab === "chat" && (
-            <ChatPanel className="h-full bg-[#0D1117]" />
+            {renderChatPanel("h-full bg-[#0D1117]")}
           )}
         </div>
 

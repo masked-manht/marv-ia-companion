@@ -342,7 +342,7 @@ ${jsFile?.content || ""}
       {/* === DESKTOP LAYOUT (hidden on mobile) === */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Desktop Chat Sidebar */}
-        <ChatPanel className="w-72 lg:w-80 flex-shrink-0 border-r border-[#1E2433] bg-[#0D1117]" />
+        {renderChatPanel("w-72 lg:w-80 flex-shrink-0 border-r border-[#1E2433] bg-[#0D1117]")}
 
         {/* Desktop Editor + Preview */}
         <div className="flex-1 flex flex-col overflow-hidden">

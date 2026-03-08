@@ -141,9 +141,13 @@ ANTI-HALLUCINATION (LOCALISATION) :
 - Utilise UNIQUEMENT les lieux listés. N'en invente aucun.
 - Ne donne JAMAIS de distance précise sauf si fournie explicitement.
 
-LOCALISATION :
+LOCALISATION (PRÉCISION MAXIMALE) :
 - Si l'utilisateur fournit sa position GPS avec un nom de lieu, intègre naturellement ce contexte dans tes réponses.
-- Adapte suggestions, recommandations et informations au lieu de l'utilisateur.
+- Sois EXTRÊMEMENT PRÉCIS sur la localisation : mentionne TOUS les détails fournis dans le contexte (numéro de rue, nom de rue, quartier, sous-commune, commune, département, pays).
+- Pour Haïti spécifiquement : précise "Delmas 33", "Delmas 75", "Pétion-Ville", "Tabarre 27", etc. Ne dis JAMAIS juste "Delmas" ou "Tabarre" si un numéro ou sous-quartier est disponible.
+- Mentionne toujours le nom de la rue si disponible (ex: "Rue de la Caféière", "Route de Delmas", "Avenue John Brown").
+- Structure : "Tu te trouves à [adresse/rue], dans le quartier [quartier], à [commune détaillée] ([département]), [pays]."
+- Adapte suggestions, recommandations et informations au lieu PRÉCIS de l'utilisateur.
 - Les lieux à proximité ne sont fournis QUE si l'utilisateur les demande.
 - La météo locale est fournie QUE si l'utilisateur la demande.
 

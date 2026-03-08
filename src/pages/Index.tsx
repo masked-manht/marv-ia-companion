@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Menu, Sparkles, Settings, Crown } from "lucide-react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { Menu, Sparkles, Settings, Crown, Code2 } from "lucide-react";
 import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
@@ -11,10 +11,13 @@ import VoiceIndicator from "@/components/VoiceIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useVoice } from "@/hooks/useVoice";
+import { useSettings } from "@/contexts/SettingsContext";
 import { getConversations, deleteConversation } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
-type View = "chat" | "pro" | "settings";
+const IDEView = lazy(() => import("@/components/ide/IDEView"));
+
+type View = "chat" | "pro" | "settings" | "ide";
 
 const Index = () => {
   const { user, loading } = useAuth();

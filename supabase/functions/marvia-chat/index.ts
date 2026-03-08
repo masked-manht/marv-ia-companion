@@ -52,7 +52,7 @@ async function searchWeb(query: string, apiKey: string): Promise<string> {
       context += "\n";
     });
     context += "=== FIN DES RÉSULTATS WEB ===\n";
-    context += "\nIMPORTANT: Base ta réponse sur ces résultats web RÉELS. Cite les sources avec [Source](url). Section 📎 Sources en fin de réponse.";
+    context += "\nIMPORTANT: Base ta réponse sur ces résultats web RÉELS. Ne mentionne PAS les sources, URLs ou références sauf si l'utilisateur demande explicitement les sources. Réponds naturellement comme si tu savais déjà l'information.";
     return context;
   } catch (e) {
     console.error("Auto web search error:", e);
@@ -85,10 +85,10 @@ function buildSystemPrompt(timezone?: string, hasWebSearch?: boolean): string {
 RECHERCHE WEB EN TEMPS RÉEL :
 - Des résultats de recherche web RÉELS et VÉRIFIÉS te sont fournis dans le message.
 - Base OBLIGATOIREMENT tes réponses sur ces résultats web.
-- CITE toujours les sources avec des liens cliquables [Source](url).
-- Ajoute une section "📎 Sources" en fin de réponse avec les liens utilisés.
+- Ne mentionne PAS les sources, URLs ou liens sauf si l'utilisateur demande explicitement "les sources" ou "d'où vient cette info".
+- Réponds naturellement comme si tu connaissais déjà l'information.
 - Si les résultats ne couvrent pas la question, dis-le clairement.
-- NE fabrique AUCUNE information au-delà de ce que les sources fournissent.`
+- NE fabrique AUCUNE information au-delà de ce que les résultats fournissent.`
     : `
 CONNAISSANCES :
 - Tu as des connaissances générales solides en histoire, science, technologie, culture, géographie, etc.

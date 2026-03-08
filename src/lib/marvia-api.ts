@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-chat`;
+const MEMORY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-memory`;
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-image`;
 const SEARCH_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-search`;
 
@@ -10,6 +11,7 @@ export async function streamChat({
   messages,
   model,
   timezone,
+  userId,
   onDelta,
   onDone,
   onError,
@@ -17,6 +19,7 @@ export async function streamChat({
   messages: ChatMessage[];
   model?: string;
   timezone?: string;
+  userId?: string;
   onDelta: (text: string) => void;
   onDone: () => void;
   onError: (err: string) => void;
@@ -29,7 +32,7 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, model, timezone: tz }),
+      body: JSON.stringify({ messages, model, timezone: tz, user_id: userId }),
     });
 
     if (!resp.ok) {
@@ -250,4 +253,53 @@ export async function restoreConversation(conversationId: string) {
 export async function permanentlyDeleteConversation(conversationId: string) {
   const { error } = await supabase.from("conversations").delete().eq("id", conversationId);
   return error;
+}
+
+// --- Memory API ---
+const memoryHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+};
+
+export async function extractMemories(userId: string, messages: ChatMessage[]) {
+  try {
+    await fetch(MEMORY_URL, {
+      method: "POST",
+      headers: memoryHeaders,
+      body: JSON.stringify({ action: "extract", user_id: userId, messages }),
+    });
+  } catch (e) {
+    console.error("Memory extraction failed:", e);
+  }
+}
+
+export async function getUserMemories(userId: string) {
+  try {
+    const resp = await fetch(MEMORY_URL, {
+      method: "POST",
+      headers: memoryHeaders,
+      body: JSON.stringify({ action: "get", user_id: userId }),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.memories || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteMemory(userId: string, memoryId: string) {
+  await fetch(MEMORY_URL, {
+    method: "POST",
+    headers: memoryHeaders,
+    body: JSON.stringify({ action: "delete", user_id: userId, memory_id: memoryId }),
+  });
+}
+
+export async function clearAllMemories(userId: string) {
+  await fetch(MEMORY_URL, {
+    method: "POST",
+    headers: memoryHeaders,
+    body: JSON.stringify({ action: "clear", user_id: userId }),
+  });
 }

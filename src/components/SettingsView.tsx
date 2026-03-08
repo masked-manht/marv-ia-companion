@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight, Brain, X } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { Switch } from "@/components/ui/switch";
 import { isProModel } from "@/hooks/useCredits";
-import { getDeletedConversations, restoreConversation, permanentlyDeleteConversation } from "@/lib/marvia-api";
+import { getDeletedConversations, restoreConversation, permanentlyDeleteConversation, getUserMemories, deleteMemory, clearAllMemories } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
 const ACCENT_LABELS: Record<AccentColor, { label: string; preview: string }> = {
@@ -42,6 +42,12 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [trashLoading, setTrashLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // Memory state
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memories, setMemories] = useState<any[]>([]);
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [confirmClearMemory, setConfirmClearMemory] = useState(false);
+
   const loadTrash = useCallback(async () => {
     if (!user) return;
     setTrashLoading(true);
@@ -53,6 +59,33 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   useEffect(() => {
     if (trashOpen) loadTrash();
   }, [trashOpen, loadTrash]);
+
+  const loadMemories = useCallback(async () => {
+    if (!user) return;
+    setMemoryLoading(true);
+    const data = await getUserMemories(user.id);
+    setMemories(data);
+    setMemoryLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (memoryOpen) loadMemories();
+  }, [memoryOpen, loadMemories]);
+
+  const handleDeleteMemory = async (id: string) => {
+    if (!user) return;
+    await deleteMemory(user.id, id);
+    setMemories(prev => prev.filter(m => m.id !== id));
+    toast.success("Souvenir supprimé");
+  };
+
+  const handleClearAllMemories = async () => {
+    if (!user) return;
+    await clearAllMemories(user.id);
+    setMemories([]);
+    setConfirmClearMemory(false);
+    toast.success("Mémoire effacée");
+  };
 
   const handleRestore = async (id: string) => {
     const error = await restoreConversation(id);
@@ -222,6 +255,72 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
             </Row>
           </Section>
         )}
+
+        {/* Mémoire */}
+        <Section icon={<Brain className="w-4 h-4" />} title="Mémoire">
+          <Row label="Souvenirs de l'IA" onClick={() => setMemoryOpen(!memoryOpen)}>
+            <div className="flex items-center gap-2">
+              {!memoryOpen && memories.length > 0 && (
+                <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">{memories.length}</span>
+              )}
+              <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${memoryOpen ? "rotate-90" : ""}`} />
+            </div>
+          </Row>
+          {memoryOpen && (
+            <div className="px-3 py-3 space-y-2 max-h-80 overflow-y-auto scrollbar-hide">
+              {memoryLoading && (
+                <p className="text-center text-muted-foreground text-xs py-4">Chargement...</p>
+              )}
+              {!memoryLoading && memories.length === 0 && (
+                <div className="flex flex-col items-center py-6 opacity-60">
+                  <Brain className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-xs text-muted-foreground">Aucun souvenir enregistré</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Discutez avec Marv-IA pour qu'elle apprenne à vous connaître</p>
+                </div>
+              )}
+              {memories.map((mem: any) => {
+                const catIcons: Record<string, string> = {
+                  identite: "👤", lieu: "📍", profession: "💼",
+                  preference: "⭐", projet: "📋", relation: "👥", general: "📝"
+                };
+                return (
+                  <div key={mem.id} className="flex items-start gap-2 bg-muted/50 rounded-lg p-2.5 group">
+                    <span className="text-sm flex-shrink-0">{catIcons[mem.category] || "📝"}</span>
+                    <p className="text-xs text-foreground flex-1">{mem.content}</p>
+                    <button
+                      onClick={() => handleDeleteMemory(mem.id)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {memories.length > 0 && (
+                <div className="pt-2">
+                  {confirmClearMemory ? (
+                    <div className="flex items-center gap-2 bg-destructive/10 rounded-lg p-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                      <p className="text-[10px] text-destructive flex-1">Effacer toute la mémoire ?</p>
+                      <button onClick={handleClearAllMemories} className="text-[10px] font-bold text-destructive-foreground bg-destructive px-2 py-0.5 rounded">Oui</button>
+                      <button onClick={() => setConfirmClearMemory(false)} className="text-[10px] text-muted-foreground px-1.5 py-0.5">Non</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmClearMemory(true)}
+                      className="w-full text-center text-[11px] text-destructive hover:underline py-1"
+                    >
+                      Tout effacer
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="px-4 py-2 text-[10px] text-muted-foreground">
+            Marv-IA mémorise automatiquement vos préférences et informations personnelles partagées en conversation.
+          </div>
+        </Section>
 
         {/* Corbeille */}
         <Section icon={<Trash2 className="w-4 h-4" />} title="Corbeille">

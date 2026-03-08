@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2, Camera, MapPin, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ImageBubble from "@/components/ImageBubble";
-import { streamChat, streamSearch, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
+import { streamChat, streamSearch, generateImage, saveMessage, createConversation, getMessages, extractMemories, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
@@ -210,6 +210,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     await streamChat({
       messages: apiMessages,
       model: effectiveModel,
+      userId: user?.id,
       onDelta: (chunk) => {
         assistantSoFar += chunk;
         setMessages(prev => {
@@ -222,6 +223,11 @@ export default function ChatView({ conversationId, onConversationCreated, credit
         setIsLoading(false);
         if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
         if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
+        // Extract memories in background
+        if (user && assistantSoFar) {
+          const recentMsgs = [...apiMessages.slice(-4), { role: "assistant" as const, content: assistantSoFar }];
+          extractMemories(user.id, recentMsgs);
+        }
       },
       onError: (err) => {
         setIsLoading(false);

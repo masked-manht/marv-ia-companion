@@ -137,6 +137,27 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (currentConvId && user) saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
 
     setIsLoading(true);
+
+    // Image generation
+    if (isImageGen) {
+      const ok = await onConsumeCredit();
+      if (!ok) { setIsLoading(false); toast.error("Crédits épuisés !"); return; }
+      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
+      const assistantId = crypto.randomUUID();
+      setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours..." }]);
+      const result = await generateImage(prompt);
+      if (result.error) {
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `❌ ${result.error}` } : m));
+      } else if (result.imageUrl) {
+        const content = result.text || "Image générée ✨";
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content, image_url: result.imageUrl } : m));
+        if (currentConvId && user) saveMessage(currentConvId, user.id, "assistant", content, result.imageUrl);
+      }
+      setIsLoading(false);
+      onRefreshCredits();
+      return;
+    }
+
     let assistantSoFar = "";
     const assistantId = crypto.randomUUID();
 

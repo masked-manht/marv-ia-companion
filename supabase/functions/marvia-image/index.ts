@@ -5,6 +5,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function extractImageUrl(data: any): string | undefined {
+  // Try chat completions format: choices[0].message.images[0].image_url.url
+  const chatImage = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (chatImage) return chatImage;
+  // Try images/generations format with choices: choices[0].images[0].image_url.url
+  const genImage = data?.choices?.[0]?.images?.[0]?.image_url?.url;
+  if (genImage) return genImage;
+  // Try standard OpenAI format: data[0].url or data[0].b64_json
+  const stdUrl = data?.data?.[0]?.url;
+  if (stdUrl) return stdUrl;
+  const b64 = data?.data?.[0]?.b64_json;
+  if (b64) return `data:image/png;base64,${b64}`;
+  return undefined;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,7 +30,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Try images/generations endpoint first
+    const imgResponse = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -23,40 +39,81 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
-        messages: [
-          { role: "user", content: prompt },
-        ],
+        prompt,
+        n: 1,
+        size: "1024x1024",
+      }),
+    });
+
+    if (imgResponse.ok) {
+      const imgData = await imgResponse.json();
+      const imageUrl = extractImageUrl(imgData);
+      if (imageUrl) {
+        const text = imgData?.choices?.[0]?.message?.content || "Image générée ✨";
+        return new Response(JSON.stringify({ imageUrl, text }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      const status = imgResponse.status;
+      await imgResponse.text(); // consume body
+      if (status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte. Réessayez." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (status === 402) {
+        return new Response(JSON.stringify({ error: "Crédits épuisés." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Fallback: chat completions with gemini-2.5-flash-image
+    const chatResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [{ role: "user", content: `Generate an image of: ${prompt}` }],
         modalities: ["image", "text"],
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte." }), {
-          status: 429,
+    if (chatResponse.ok) {
+      const chatData = await chatResponse.json();
+      const imageUrl = extractImageUrl(chatData);
+      if (imageUrl) {
+        const text = chatData?.choices?.[0]?.message?.content || "Image générée ✨";
+        return new Response(JSON.stringify({ imageUrl, text }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("Image gen error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erreur de génération d'image" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    } else {
+      const status = chatResponse.status;
+      await chatResponse.text();
+      if (status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte. Réessayez." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (status === 402) {
+        return new Response(JSON.stringify({ error: "Crédits épuisés." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    const text = data.choices?.[0]?.message?.content || "";
-
-    return new Response(JSON.stringify({ imageUrl, text }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: "Aucune image générée. Essayez un prompt différent." }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("image gen error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erreur inconnue" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

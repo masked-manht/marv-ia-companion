@@ -282,6 +282,7 @@ ${jsFile?.content || ""}
       <div className="p-2 border-t border-[#1E2433] flex-shrink-0">
         <div className="flex items-end gap-1.5 bg-[#1A1F2E] rounded-xl px-3 py-2 border border-[#1E2433]">
           <textarea
+            ref={chatInputRef}
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}

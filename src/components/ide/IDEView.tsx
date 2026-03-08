@@ -208,6 +208,23 @@ ${jsFile?.content || ""}
   };
 
   // --- Chat Panel (reusable for both desktop sidebar & mobile fullscreen) ---
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Handle mobile keyboard: adjust layout when virtual keyboard opens
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      if (chatInputRef.current && document.activeElement === chatInputRef.current) {
+        requestAnimationFrame(() => {
+          chatInputRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+
   const ChatPanel = ({ className = "" }: { className?: string }) => (
     <div className={`flex flex-col ${className}`}>
       <div className="px-3 py-2.5 border-b border-[#1E2433] flex items-center gap-2 flex-shrink-0">

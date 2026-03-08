@@ -12,6 +12,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
   const [locationStatus, setLocationStatus] = useState<"pending" | "granted" | "denied">("pending");
   const [cameraStatus, setCameraStatus] = useState<"pending" | "granted" | "denied">("pending");
   const [notifStatus, setNotifStatus] = useState<"pending" | "granted" | "denied">("pending");
+  const [requesting, setRequesting] = useState(false);
 
   // Check existing permissions on mount
   useEffect(() => {
@@ -33,19 +34,35 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
     })();
   }, []);
 
+  const handleFinish = () => {
+    localStorage.setItem("marvia-permissions-asked", "true");
+    onComplete();
+  };
+
+  // Auto-advance if already granted
+  const advanceTo = (next: PermStep) => {
+    if (next === "location" && locationStatus === "granted") return advanceTo("camera");
+    if (next === "camera" && cameraStatus === "granted") return advanceTo("notifications");
+    if (next === "notifications" && notifStatus === "granted") return advanceTo("done");
+    setStep(next);
+  };
+
   const requestLocation = async () => {
+    setRequesting(true);
     try {
       await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 15000, enableHighAccuracy: false, maximumAge: 60000 });
       });
       setLocationStatus("granted");
     } catch {
       setLocationStatus("denied");
     }
-    setStep("camera");
+    setRequesting(false);
+    advanceTo("camera");
   };
 
   const requestCamera = async () => {
+    setRequesting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach(t => t.stop());
@@ -53,35 +70,30 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
     } catch {
       setCameraStatus("denied");
     }
-    setStep("notifications");
+    setRequesting(false);
+    advanceTo("notifications");
   };
 
   const requestNotifications = async () => {
+    setRequesting(true);
     if ("Notification" in window) {
       const result = await Notification.requestPermission();
       setNotifStatus(result === "granted" ? "granted" : "denied");
       if (result === "granted") {
         try {
           const reg = await navigator.serviceWorker.ready;
-          reg.showNotification("Marv-IA", {
-            body: "Notifications activées ! 🎉",
-            icon: "/marvia-icon.png",
-          } as any);
+          reg.showNotification("Marv-IA", { body: "Notifications activées ! 🎉", icon: "/marvia-icon.png" } as any);
         } catch {
           try { new Notification("Marv-IA", { body: "Notifications activées ! 🎉", icon: "/marvia-icon.png" }); } catch {}
         }
       }
     }
+    setRequesting(false);
     setStep("done");
   };
 
-  const handleFinish = () => {
-    localStorage.setItem("marvia-permissions-asked", "true");
-    onComplete();
-  };
-
   const skipStep = (next: PermStep) => {
-    setStep(next);
+    advanceTo(next);
   };
 
   const StatusDot = ({ status }: { status: "pending" | "granted" | "denied" }) => (
@@ -127,7 +139,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               />
 
               <button
-                onClick={() => setStep("location")}
+                onClick={() => advanceTo("location")}
                 className="w-full mt-4 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
               >
                 Continuer
@@ -150,6 +162,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               status={locationStatus}
               onAllow={requestLocation}
               onSkip={() => skipStep("camera")}
+              requesting={requesting}
             />
           )}
 
@@ -161,6 +174,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               status={cameraStatus}
               onAllow={requestCamera}
               onSkip={() => skipStep("notifications")}
+              requesting={requesting}
             />
           )}
 
@@ -172,6 +186,7 @@ export default function PermissionsRequest({ onComplete }: PermissionsRequestPro
               status={notifStatus}
               onAllow={requestNotifications}
               onSkip={() => setStep("done")}
+              requesting={requesting}
             />
           )}
 
@@ -214,9 +229,9 @@ function PermRow({ icon, title, desc, status }: { icon: React.ReactNode; title: 
   );
 }
 
-function PermPrompt({ icon, title, desc, status, onAllow, onSkip }: {
+function PermPrompt({ icon, title, desc, status, onAllow, onSkip, requesting }: {
   icon: React.ReactNode; title: string; desc: string;
-  status: "pending" | "granted" | "denied"; onAllow: () => void; onSkip: () => void;
+  status: "pending" | "granted" | "denied"; onAllow: () => void; onSkip: () => void; requesting?: boolean;
 }) {
   return (
     <div className="text-center space-y-4">
@@ -232,10 +247,14 @@ function PermPrompt({ icon, title, desc, status, onAllow, onSkip }: {
         </div>
       ) : (
         <div className="space-y-2">
-          <button onClick={onAllow} className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">
-            Autoriser
+          <button
+            onClick={onAllow}
+            disabled={requesting}
+            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+          >
+            {requesting ? "⏳ En attente..." : "Autoriser"}
           </button>
-          <button onClick={onSkip} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+          <button onClick={onSkip} disabled={requesting} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1 disabled:opacity-40">
             Plus tard
           </button>
         </div>

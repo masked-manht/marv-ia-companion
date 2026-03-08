@@ -19,10 +19,9 @@ interface SidebarDrawerProps {
   onNew: () => void;
   onDelete: (id: string) => void;
   onOpenSettings: () => void;
-  onOpenTrash: () => void;
 }
 
-export default function SidebarDrawer({ open, onClose, conversations, activeId, onSelect, onNew, onDelete, onOpenSettings, onOpenTrash }: SidebarDrawerProps) {
+export default function SidebarDrawer({ open, onClose, conversations, activeId, onSelect, onNew, onDelete, onOpenSettings }: SidebarDrawerProps) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
 
@@ -106,11 +105,7 @@ export default function SidebarDrawer({ open, onClose, conversations, activeId, 
         </div>
 
         {/* Bottom */}
-        <div className="border-t border-border p-3 space-y-1">
-          <button onClick={() => { onOpenTrash(); onClose(); }} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-            <Trash2 className="w-4 h-4" />
-            <span className="text-sm">Corbeille</span>
-          </button>
+        <div className="border-t border-border p-3">
           <button onClick={() => { onOpenSettings(); onClose(); }} className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
             <Settings className="w-4 h-4" />
             <span className="text-sm">Paramètres</span>

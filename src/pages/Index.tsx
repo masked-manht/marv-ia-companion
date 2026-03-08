@@ -4,7 +4,6 @@ import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
 import SettingsView from "@/components/SettingsView";
-import TrashView from "@/components/TrashView";
 import CreditsDisplay from "@/components/CreditsDisplay";
 import AuthPage from "@/components/AuthPage";
 import SplashScreen from "@/components/SplashScreen";
@@ -18,7 +17,7 @@ import { toast } from "sonner";
 
 const IDEView = lazy(() => import("@/components/ide/IDEView"));
 
-type View = "chat" | "pro" | "settings" | "ide" | "trash";
+type View = "chat" | "pro" | "settings" | "ide";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -41,7 +40,7 @@ const Index = () => {
 
   const handleNewConversation = () => {
     setActiveConversationId(null);
-    if (view === "settings" || view === "trash") setView("chat");
+    if (view === "settings") setView("chat");
   };
 
   const handleDeleteConversation = async (id: string) => {
@@ -90,11 +89,7 @@ const Index = () => {
   }
 
   if (view === "settings") {
-    return <SettingsView onBack={() => setView("chat")} credits={credits} />;
-  }
-
-  if (view === "trash") {
-    return <TrashView onBack={() => setView("chat")} onRestored={loadConversations} />;
+    return <SettingsView onBack={() => setView("chat")} credits={credits} onConversationsChanged={loadConversations} />;
   }
 
   if (view === "pro") {
@@ -174,7 +169,6 @@ const Index = () => {
         onNew={handleNewConversation}
         onDelete={handleDeleteConversation}
         onOpenSettings={() => setView("settings")}
-        onOpenTrash={() => setView("trash")}
       />
     </div>
   );

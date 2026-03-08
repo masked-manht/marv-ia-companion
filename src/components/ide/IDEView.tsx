@@ -4,6 +4,7 @@ import CodeEditor from "./CodeEditor";
 import LivePreview from "./LivePreview";
 import ConsolePanel, { type ConsoleMessage } from "./ConsolePanel";
 import FileTabs, { type FileTab } from "./FileTabs";
+import { executePython } from "./pythonSimulator";
 import ReactMarkdown from "react-markdown";
 import { streamChat } from "@/lib/marvia-api";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -14,6 +15,7 @@ const DEFAULT_FILES: FileTab[] = [
   { id: "html", name: "index.html", language: "html", content: '<!-- Écrivez votre HTML ici -->\n<div class="container">\n  <h1>Hello Marv-IA 🚀</h1>\n  <p>Bienvenue dans le Mode IDE</p>\n  <button onclick="greet()">Cliquez-moi</button>\n</div>' },
   { id: "css", name: "style.css", language: "css", content: '/* Styles */\n.container {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  min-height: 80vh;\n  gap: 16px;\n  font-family: system-ui, sans-serif;\n}\n\nh1 {\n  font-size: 2rem;\n  background: linear-gradient(135deg, #007BFF, #39FF14);\n  -webkit-background-clip: text;\n  -webkit-text-fill-color: transparent;\n}\n\nbutton {\n  padding: 10px 24px;\n  background: #007BFF;\n  color: white;\n  border: none;\n  border-radius: 8px;\n  font-size: 1rem;\n  cursor: pointer;\n  transition: transform 0.2s;\n}\n\nbutton:hover {\n  transform: scale(1.05);\n}' },
   { id: "js", name: "script.js", language: "javascript", content: '// JavaScript\nfunction greet() {\n  console.log("Bonjour depuis Marv-IA IDE ! 🎉");\n  document.querySelector("h1").textContent = "Ça marche !";\n}' },
+  { id: "py", name: "main.py", language: "python", content: '# Python - Simulateur Marv-IA\n\n# Variables et types\nnom = "Marv-IA"\nversion = 2.0\nactif = True\n\nprint(f"Bienvenue dans {nom} v{version}")\nprint(f"Statut: {actif}")\n\n# Boucle et conditions\nfor i in range(5):\n    if i % 2 == 0:\n        print(f"{i} est pair")\n    else:\n        print(f"{i} est impair")\n\n# Fonctions\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    a = 0\n    b = 1\n    for i in range(2, n + 1):\n        temp = a + b\n        a = b\n        b = temp\n    return b\n\nprint(f"Fibonacci(10) = {fibonacci(10)}")\n\n# Listes\nfruits = ["pomme", "banane", "orange"]\nfruits.append("kiwi")\nprint(f"Fruits: {fruits}")\nprint(f"Nombre: {len(fruits)}")\n' },
 ];
 
 type ChatMsg = { id: string; role: "user" | "assistant"; content: string };

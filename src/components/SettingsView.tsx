@@ -131,6 +131,16 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
           </Row>
         </Section>
 
+        {/* Mode IDE */}
+        <Section icon={<Code2 className="w-4 h-4" />} title="Mode IDE">
+          <Row label="Activer le Mode IDE">
+            <Switch checked={ideMode} onCheckedChange={setIdeMode} />
+          </Row>
+          <div className="px-4 py-2 text-xs text-muted-foreground">
+            <p>Éditeur de code intégré avec prévisualisation en direct, console et assistant IA.</p>
+          </div>
+        </Section>
+
         {/* Audio */}
         <Section icon={<Volume2 className="w-4 h-4" />} title="Audio & Voix">
           <Row label="Synthèse vocale">

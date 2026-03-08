@@ -13,6 +13,12 @@ function needsWebSearch(text: string): boolean {
   return patterns.test(text);
 }
 
+// Detect time queries that mention a specific country/city
+function isTimeQueryWithLocation(text: string): boolean {
+  const timePattern = /quelle heure.+(à|en|au|aux|a)\s+\w+|what time.+(in)\s+\w+|heure.+(à|en|au|aux)\s+\w+|l'heure.+(à|en|au|aux)\s+\w+/i;
+  return timePattern.test(text);
+}
+
 // --- Firecrawl web search ---
 async function searchWeb(query: string, apiKey: string): Promise<string> {
   try {
@@ -97,6 +103,12 @@ DATE ET HEURE ACTUELLES :
 - Tu connais cette date avec certitude. Ne dis JAMAIS que tu ne connais pas la date actuelle.
 - Si on te demande la date, le jour ou l'heure, utilise ces informations.
 - Tu peux discuter d'événements jusqu'à aujourd'hui inclus.
+
+HEURE POUR UN AUTRE PAYS/VILLE :
+- Si l'utilisateur demande "quelle heure est-il ?" SANS préciser de pays ou de ville, demande-lui TOUJOURS : "Pour quel pays ou quelle ville souhaites-tu connaître l'heure ?"
+- Si l'utilisateur précise un pays ou une ville, une recherche web sera effectuée pour obtenir l'heure exacte. Base ta réponse sur les résultats web.
+- Ne calcule JAMAIS l'heure toi-même par décalage horaire. Utilise UNIQUEMENT les résultats de recherche web pour donner l'heure d'un autre pays.
+- Mentionne toujours le fuseau horaire du pays (ex: UTC-5, UTC+1, etc.) dans ta réponse.
 ${webSearchBlock}
 
 ANTI-HALLUCINATION STRICTE (POLITIQUE ZÉRO TOLÉRANCE) :
@@ -179,9 +191,11 @@ serve(async (req) => {
         .replace(/\[Réponds de manière [^\]]+\]\s*/g, "")
         .trim();
 
-      // --- Auto web search when needed ---
-      if (FIRECRAWL_API_KEY && needsWebSearch(userText)) {
-        const webContext = await searchWeb(userText, FIRECRAWL_API_KEY);
+      // --- Auto web search when needed (including time queries with location) ---
+      const needsSearch = needsWebSearch(userText) || isTimeQueryWithLocation(userText);
+      if (FIRECRAWL_API_KEY && needsSearch) {
+        const searchQuery = isTimeQueryWithLocation(userText) ? `heure actuelle ${userText}` : userText;
+        const webContext = await searchWeb(searchQuery, FIRECRAWL_API_KEY);
         if (webContext) {
           webSearchUsed = true;
           enrichedMessages[enrichedMessages.length - 1] = {

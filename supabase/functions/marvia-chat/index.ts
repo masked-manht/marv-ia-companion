@@ -63,7 +63,7 @@ serve(async (req) => {
 
     const selectedModel = model || "google/gemini-3-flash-preview";
 
-    // If location data is in the last message, try to enrich it
+    // If location data is in the last message, enrich with detailed geocoding + nearby POIs
     let enrichedMessages = [...messages];
     const lastMsg = enrichedMessages[enrichedMessages.length - 1];
     if (lastMsg?.role === "user" && typeof lastMsg.content === "string") {
@@ -71,29 +71,95 @@ serve(async (req) => {
       if (locMatch) {
         const lat = parseFloat(locMatch[1]);
         const lon = parseFloat(locMatch[2]);
+        let locationContext = "";
+
+        // 1. Detailed reverse geocoding
         try {
           const geoResp = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=fr`,
-            { headers: { "User-Agent": "MarvIA/1.0" } }
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=fr&addressdetails=1&zoom=18`,
+            { headers: { "User-Agent": "MarvIA/2.0" } }
           );
           if (geoResp.ok) {
             const geoData = await geoResp.json();
             const addr = geoData.address || {};
-            const placeName = [
-              addr.road, addr.suburb, addr.city || addr.town || addr.village,
-              addr.state, addr.country
-            ].filter(Boolean).join(", ");
-            enrichedMessages[enrichedMessages.length - 1] = {
-              ...lastMsg,
-              content: lastMsg.content.replace(
-                /\[Position:\s*[-\d.]+,\s*[-\d.]+\]/,
-                `[L'utilisateur se trouve à : ${placeName}]`
-              ),
-            };
+            const details = [
+              addr.house_number && addr.road ? `${addr.house_number} ${addr.road}` : addr.road,
+              addr.neighbourhood || addr.quarter,
+              addr.suburb,
+              addr.city || addr.town || addr.village || addr.municipality,
+              addr.city_district,
+              addr.county || addr.state_district,
+              addr.state || addr.region,
+              addr.postcode,
+              addr.country
+            ].filter(Boolean);
+
+            const country = addr.country || "Inconnu";
+            const department = addr.county || addr.state_district || addr.state || "";
+            const commune = addr.municipality || addr.town || addr.village || addr.city || "";
+            const city = addr.city || addr.town || addr.village || "";
+            const quarter = addr.neighbourhood || addr.quarter || addr.suburb || "";
+
+            locationContext = `📍 LOCALISATION PRÉCISE DE L'UTILISATEUR :
+- Pays : ${country}
+- Département/Région : ${department}
+- Commune : ${commune}
+- Ville : ${city}
+- Quartier : ${quarter}
+- Adresse complète : ${details.join(", ")}
+- Coordonnées GPS : ${lat}, ${lon}`;
           }
         } catch {
-          // Keep raw coords if geocoding fails
+          locationContext = `📍 Position GPS : ${lat}, ${lon}`;
         }
+
+        // 2. Nearby POIs via Overpass API (bars, hotels, restaurants, hospitals, schools, etc.)
+        try {
+          const radius = 500; // 500m radius
+          const overpassQuery = `
+[out:json][timeout:5];
+(
+  node["amenity"~"restaurant|bar|cafe|hospital|pharmacy|school|university|bank|police|fire_station|place_of_worship|cinema|theatre|library"](around:${radius},${lat},${lon});
+  node["tourism"~"hotel|hostel|motel|guest_house|museum|attraction"](around:${radius},${lat},${lon});
+  node["shop"~"supermarket|mall|department_store"](around:${radius},${lat},${lon});
+);
+out body 15;`;
+          const poiResp = await fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `data=${encodeURIComponent(overpassQuery)}`,
+          });
+          if (poiResp.ok) {
+            const poiData = await poiResp.json();
+            const pois = (poiData.elements || [])
+              .filter((e: any) => e.tags?.name)
+              .map((e: any) => {
+                const type = e.tags.amenity || e.tags.tourism || e.tags.shop || "";
+                const typeLabels: Record<string, string> = {
+                  restaurant: "🍽️", bar: "🍺", cafe: "☕", hotel: "🏨", hostel: "🏨",
+                  hospital: "🏥", pharmacy: "💊", school: "🏫", university: "🎓",
+                  bank: "🏦", police: "👮", museum: "🏛️", cinema: "🎬", supermarket: "🛒",
+                  mall: "🛍️", library: "📚", place_of_worship: "⛪", theatre: "🎭",
+                  attraction: "⭐", guest_house: "🏠", fire_station: "🚒",
+                };
+                const icon = typeLabels[type] || "📌";
+                return `${icon} ${e.tags.name} (${type})`;
+              });
+            if (pois.length > 0) {
+              locationContext += `\n\n🏢 LIEUX À PROXIMITÉ (rayon ~500m) :\n${pois.join("\n")}`;
+            }
+          }
+        } catch {
+          // POI lookup is optional, skip on error
+        }
+
+        enrichedMessages[enrichedMessages.length - 1] = {
+          ...lastMsg,
+          content: lastMsg.content.replace(
+            /\[Position:\s*[-\d.]+,\s*[-\d.]+\]/,
+            `[${locationContext}]`
+          ),
+        };
       }
     }
 

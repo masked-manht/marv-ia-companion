@@ -1,10 +1,12 @@
 import React from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { Switch } from "@/components/ui/switch";
 import { isProModel } from "@/hooks/useCredits";
+import { toast } from "sonner";
 
 const ACCENT_LABELS: Record<AccentColor, { label: string; preview: string }> = {
   green:  { label: "Vert",   preview: "bg-[hsl(120,100%,55%)]" },
@@ -30,6 +32,7 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
   const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor } = useSettings();
   const { user, signOut } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
+  const { updateAvailable, checking, checkForUpdate, applyUpdate } = useServiceWorker();
 
   const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">
@@ -168,6 +171,37 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
 
         {/* Technique */}
         <Section icon={<Wrench className="w-4 h-4" />} title="Technique">
+          <Row label="Mise à jour">
+            {updateAvailable ? (
+              <button
+                onClick={() => { applyUpdate(); toast.success("Mise à jour en cours..."); }}
+                className="flex items-center gap-1.5 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium animate-pulse"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Installer la mise à jour
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  const hasUpdate = await checkForUpdate();
+                  if (hasUpdate) {
+                    toast.success("Nouvelle version disponible !");
+                  } else {
+                    toast.info("Vous êtes à jour ✓");
+                  }
+                }}
+                disabled={checking}
+                className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                {checking ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-3.5 h-3.5" />
+                )}
+                {checking ? "Vérification..." : "Vérifier les mises à jour"}
+              </button>
+            )}
+          </Row>
           <Row label="Modèle IA">
             <select
               value={aiModel}

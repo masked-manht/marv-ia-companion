@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Menu, Sparkles, Settings, Crown } from "lucide-react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { Menu, Sparkles, Settings, Crown, Code2 } from "lucide-react";
 import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
@@ -11,15 +11,19 @@ import VoiceIndicator from "@/components/VoiceIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useVoice } from "@/hooks/useVoice";
+import { useSettings } from "@/contexts/SettingsContext";
 import { getConversations, deleteConversation } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
-type View = "chat" | "pro" | "settings";
+const IDEView = lazy(() => import("@/components/ide/IDEView"));
+
+type View = "chat" | "pro" | "settings" | "ide";
 
 const Index = () => {
   const { user, loading } = useAuth();
   const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
   const { isSpeaking, stopSpeaking } = useVoice();
+  const { ideMode } = useSettings();
   const [view, setView] = useState<View>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -68,6 +72,21 @@ const Index = () => {
 
   if (!user) return <AuthPage />;
 
+  if (view === "ide") {
+    return (
+      <Suspense fallback={
+        <div className="h-screen flex items-center justify-center" style={{ background: "#0A0E14" }}>
+          <div className="flex flex-col items-center gap-3">
+            <Code2 className="w-10 h-10 text-[#007BFF] animate-pulse" />
+            <p className="text-sm text-[#4A5568]">Chargement du Mode IDE...</p>
+          </div>
+        </div>
+      }>
+        <IDEView onBack={() => setView("chat")} />
+      </Suspense>
+    );
+  }
+
   if (view === "settings") {
     return <SettingsView onBack={() => setView("chat")} credits={credits} />;
   }
@@ -112,6 +131,15 @@ const Index = () => {
           <span>PRO</span>
           <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[10px]">{credits}</span>
         </button>
+        {ideMode && (
+          <button
+            onClick={() => setView("ide")}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#007BFF]/15 text-[#007BFF] text-xs font-bold hover:bg-[#007BFF]/25 transition-all"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span>IDE</span>
+          </button>
+        )}
         <button onClick={() => setView("settings")} className="text-muted-foreground hover:text-foreground transition-colors">
           <Settings className="w-5 h-5" />
         </button>

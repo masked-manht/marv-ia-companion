@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2 } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -29,7 +29,7 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
 };
 
 export default function SettingsView({ onBack, credits }: SettingsViewProps) {
-  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor } = useSettings();
+  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode } = useSettings();
   const { user, signOut } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
   const { updateAvailable, checking, checkForUpdate, applyUpdate } = useServiceWorker();
@@ -129,6 +129,16 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
               ))}
             </div>
           </Row>
+        </Section>
+
+        {/* Mode IDE */}
+        <Section icon={<Code2 className="w-4 h-4" />} title="Mode IDE">
+          <Row label="Activer le Mode IDE">
+            <Switch checked={ideMode} onCheckedChange={setIdeMode} />
+          </Row>
+          <div className="px-4 py-2 text-xs text-muted-foreground">
+            <p>Éditeur de code intégré avec prévisualisation en direct, console et assistant IA.</p>
+          </div>
         </Section>
 
         {/* Audio */}

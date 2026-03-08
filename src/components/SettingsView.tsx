@@ -112,7 +112,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
               <span className={`text-sm font-bold ${credits <= 5 ? "text-destructive" : "text-primary"}`}>{credits}/25</span>
             </div>
           </Row>
-          <Row label="Renouvellement" value="Chaque jour à minuit (UTC)" />
+          <Row label="Renouvellement" value="Chaque jour à minuit (heure locale)" />
           <div className="px-4 py-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5 mb-1">
               <Crown className="w-3.5 h-3.5 text-yellow-500" />

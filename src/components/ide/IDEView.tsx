@@ -222,6 +222,16 @@ ${jsFile?.content || ""}
           <span className="text-[10px] bg-[#007BFF]/15 text-[#007BFF] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">IDE</span>
         </div>
         <div className="flex items-center gap-1">
+          {isPythonActive && (
+            <button
+              onClick={handleRunPython}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#39FF14]/15 text-[#39FF14] rounded-md hover:bg-[#39FF14]/25 transition-colors"
+              title="Exécuter Python"
+            >
+              <Play className="w-3.5 h-3.5" />
+              Run
+            </button>
+          )}
           <button
             onClick={() => setChatOpen(!chatOpen)}
             className="p-1.5 text-[#4A5568] hover:text-[#E2E8F0] transition-colors"

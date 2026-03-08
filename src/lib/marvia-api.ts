@@ -254,3 +254,52 @@ export async function permanentlyDeleteConversation(conversationId: string) {
   const { error } = await supabase.from("conversations").delete().eq("id", conversationId);
   return error;
 }
+
+// --- Memory API ---
+const memoryHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+};
+
+export async function extractMemories(userId: string, messages: ChatMessage[]) {
+  try {
+    await fetch(MEMORY_URL, {
+      method: "POST",
+      headers: memoryHeaders,
+      body: JSON.stringify({ action: "extract", user_id: userId, messages }),
+    });
+  } catch (e) {
+    console.error("Memory extraction failed:", e);
+  }
+}
+
+export async function getUserMemories(userId: string) {
+  try {
+    const resp = await fetch(MEMORY_URL, {
+      method: "POST",
+      headers: memoryHeaders,
+      body: JSON.stringify({ action: "get", user_id: userId }),
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.memories || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteMemory(userId: string, memoryId: string) {
+  await fetch(MEMORY_URL, {
+    method: "POST",
+    headers: memoryHeaders,
+    body: JSON.stringify({ action: "delete", user_id: userId, memory_id: memoryId }),
+  });
+}
+
+export async function clearAllMemories(userId: string) {
+  await fetch(MEMORY_URL, {
+    method: "POST",
+    headers: memoryHeaders,
+    body: JSON.stringify({ action: "clear", user_id: userId }),
+  });
+}

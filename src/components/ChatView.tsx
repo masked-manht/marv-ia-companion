@@ -210,6 +210,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     await streamChat({
       messages: apiMessages,
       model: effectiveModel,
+      userId: user?.id,
       onDelta: (chunk) => {
         assistantSoFar += chunk;
         setMessages(prev => {
@@ -222,6 +223,11 @@ export default function ChatView({ conversationId, onConversationCreated, credit
         setIsLoading(false);
         if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
         if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
+        // Extract memories in background
+        if (user && assistantSoFar) {
+          const recentMsgs = [...apiMessages.slice(-4), { role: "assistant" as const, content: assistantSoFar }];
+          extractMemories(user.id, recentMsgs);
+        }
       },
       onError: (err) => {
         setIsLoading(false);

@@ -110,7 +110,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (isLoading) return;
 
     // Image generation detection - explicit commands + natural language
-    const imageKeywords = /^(génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make)\s+(une |un |moi |me )?(image|photo|illustration|logo|dessin|picture|artwork|affiche|poster|icon|icône|bannière|banner)/i;
+    const imageKeywords = /^(génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make|illustre|montre|affiche|produis|conçois|fabrique|peins|trace|compose|réalise|realise|rends|render|design|sketch|craft|show)\s*([\s-]?(moi|me|nous|un|une|le|la|les|du|des|l'))?\s*(une? |l[ea]? |des |du )?(image|photo|illustration|logo|dessin|picture|artwork|affiche|poster|icon|icône|bannière|banner|portrait|avatar|fond|wallpaper|graphique|graphic|visuel|visual|schéma|schema|infographie|mockup|maquette|art|peinture|painting|sketch|croquis|thumbnail|miniature|cover|couverture)/i;
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ") || imageKeywords.test(trimmed);
     if (isImageGen && credits <= 0) {
       toast.error("Crédits épuisés ! Revenez demain.", { icon: "⚡" });

@@ -10,12 +10,6 @@ export interface LocationData {
   speed: number | null;
 }
 
-/**
- * High-precision geolocation hook.
- * Uses watchPosition to continuously refine the position,
- * picks the reading with the best accuracy within a time window,
- * and includes satellite data (altitude, heading, speed).
- */
 export function useLocation() {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,9 +23,19 @@ export function useLocation() {
       }
       setLoading(true);
       bestReadingRef.current = null;
+      let resolved = false;
 
-      // Use watchPosition to get multiple readings and pick the most accurate
-      const watchId = navigator.geolocation.watchPosition(
+      const finish = (watchId: number) => {
+        if (resolved) return;
+        resolved = true;
+        navigator.geolocation.clearWatch(watchId);
+        setLoading(false);
+        if (bestReadingRef.current) setLocation(bestReadingRef.current);
+        resolve(bestReadingRef.current);
+      };
+
+      // Try getCurrentPosition first for a fast initial reading
+      navigator.geolocation.getCurrentPosition(
         (pos) => {
           const reading: LocationData = {
             latitude: pos.coords.latitude,
@@ -42,40 +46,48 @@ export function useLocation() {
             heading: pos.coords.heading,
             speed: pos.coords.speed,
           };
+          bestReadingRef.current = reading;
+          setLocation(reading);
+          // If good enough, resolve immediately
+          if (reading.accuracy <= 50) {
+            resolved = true;
+            setLoading(false);
+            resolve(reading);
+          }
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 30000 }
+      );
 
-          // Keep the most accurate reading
+      // Also start watchPosition for better accuracy
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (resolved) return;
+          const reading: LocationData = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            altitude: pos.coords.altitude,
+            altitudeAccuracy: pos.coords.altitudeAccuracy,
+            heading: pos.coords.heading,
+            speed: pos.coords.speed,
+          };
+
           if (!bestReadingRef.current || reading.accuracy < bestReadingRef.current.accuracy) {
             bestReadingRef.current = reading;
             setLocation(reading);
           }
 
-          // If we got a very accurate reading (<15m), resolve immediately
-          if (reading.accuracy <= 15) {
-            navigator.geolocation.clearWatch(watchId);
-            setLoading(false);
-            resolve(bestReadingRef.current);
+          if (reading.accuracy <= 30) {
+            finish(watchId);
           }
         },
-        () => {
-          navigator.geolocation.clearWatch(watchId);
-          setLoading(false);
-          resolve(bestReadingRef.current);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0, // Force fresh reading, no cache
-        }
+        () => finish(watchId),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
 
-      // After 8 seconds, stop watching and return best reading so far
-      setTimeout(() => {
-        navigator.geolocation.clearWatch(watchId);
-        if (loading) {
-          setLoading(false);
-          resolve(bestReadingRef.current);
-        }
-      }, 8000);
+      // Fallback: after 4s return whatever we have
+      setTimeout(() => finish(watchId), 4000);
     });
   }, []);
 

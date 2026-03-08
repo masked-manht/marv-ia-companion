@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MARVIA_VERSION = "2.0.0";
+const MARVIA_VERSION = "1.1.0";
 
 function buildSystemPrompt(): string {
   const now = new Date();

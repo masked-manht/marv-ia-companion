@@ -72,6 +72,21 @@ const Index = () => {
 
   if (!user) return <AuthPage />;
 
+  if (view === "ide") {
+    return (
+      <Suspense fallback={
+        <div className="h-screen flex items-center justify-center" style={{ background: "#0A0E14" }}>
+          <div className="flex flex-col items-center gap-3">
+            <Code2 className="w-10 h-10 text-[#007BFF] animate-pulse" />
+            <p className="text-sm text-[#4A5568]">Chargement du Mode IDE...</p>
+          </div>
+        </div>
+      }>
+        <IDEView onBack={() => setView("chat")} />
+      </Suspense>
+    );
+  }
+
   if (view === "settings") {
     return <SettingsView onBack={() => setView("chat")} credits={credits} />;
   }

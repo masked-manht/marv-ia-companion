@@ -46,6 +46,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [voiceTone, setVoiceToneState] = useState<VoiceTone>(() => (localStorage.getItem("marvia-tone") as VoiceTone) || "neutral");
   const [aiModel, setAiModelState] = useState<AIModel>(() => (localStorage.getItem("marvia-model") as AIModel) || "google/gemini-3-flash-preview");
   const [accentColor, setAccentColorState] = useState<AccentColor>(() => (localStorage.getItem("marvia-accent") as AccentColor) || "green");
+  const [ideMode, setIdeModeState] = useState(() => localStorage.getItem("marvia-ide") === "true");
 
   const setTheme = (t: Theme) => { setThemeState(t); localStorage.setItem("marvia-theme", t); };
   const setResponseStyle = (s: ResponseStyle) => { setResponseStyleState(s); localStorage.setItem("marvia-style", s); };

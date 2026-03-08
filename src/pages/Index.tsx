@@ -131,6 +131,15 @@ const Index = () => {
           <span>PRO</span>
           <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[10px]">{credits}</span>
         </button>
+        {ideMode && (
+          <button
+            onClick={() => setView("ide")}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#007BFF]/15 text-[#007BFF] text-xs font-bold hover:bg-[#007BFF]/25 transition-all"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span>IDE</span>
+          </button>
+        )}
         <button onClick={() => setView("settings")} className="text-muted-foreground hover:text-foreground transition-colors">
           <Settings className="w-5 h-5" />
         </button>

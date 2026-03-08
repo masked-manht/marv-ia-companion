@@ -109,8 +109,9 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Image generation (uses credits)
-    const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
+    // Image generation detection - explicit commands + natural language
+    const imageKeywords = /^(génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make)\s+(une |un |moi |me )?(image|photo|illustration|logo|dessin|picture|artwork|affiche|poster|icon|icône|bannière|banner)/i;
+    const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ") || imageKeywords.test(trimmed);
     if (isImageGen && credits <= 0) {
       toast.error("Crédits épuisés ! Revenez demain.", { icon: "⚡" });
       return;
@@ -142,7 +143,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (isImageGen) {
       const ok = await onConsumeCredit();
       if (!ok) { setIsLoading(false); toast.error("Crédits épuisés !"); return; }
-      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
+      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "").replace(imageKeywords, "").trim() || trimmed;
       const assistantId = crypto.randomUUID();
       setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours..." }]);
       const result = await generateImage(prompt);

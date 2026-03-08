@@ -150,6 +150,9 @@ const Index = () => {
         <ChatView
           conversationId={activeConversationId}
           onConversationCreated={handleConversationCreated}
+          credits={credits}
+          onConsumeCredit={consumeCredit}
+          onRefreshCredits={refreshCredits}
         />
       </div>
 

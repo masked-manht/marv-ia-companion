@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2, Camera, MapPin, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ImageBubble from "@/components/ImageBubble";
-import { streamChat, streamSearch, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
+import { streamChat, streamSearch, generateImage, saveMessage, createConversation, getMessages, type ChatMessage } from "@/lib/marvia-api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useVoice } from "@/hooks/useVoice";
@@ -15,11 +15,14 @@ type UIMessage = ChatMessage & { id: string };
 interface ChatViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
+  credits: number;
+  onConsumeCredit: () => Promise<boolean>;
+  onRefreshCredits: () => void;
 }
 
 const FREE_MODELS = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
 
-export default function ChatView({ conversationId, onConversationCreated }: ChatViewProps) {
+export default function ChatView({ conversationId, onConversationCreated, credits, onConsumeCredit, onRefreshCredits }: ChatViewProps) {
   const { user } = useAuth();
   const { aiModel, voiceEnabled, voiceTone, responseStyle } = useSettings();
   const { speak, startListening } = useVoice();
@@ -106,10 +109,10 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Block Pro-only features
+    // Image generation (uses credits)
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
-    if (isImageGen) {
-      toast.error("La génération d'images est réservée au mode Pro ⚡", { icon: "👑" });
+    if (isImageGen && credits <= 0) {
+      toast.error("Crédits épuisés ! Revenez demain.", { icon: "⚡" });
       return;
     }
 
@@ -134,6 +137,27 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
     if (currentConvId && user) saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
 
     setIsLoading(true);
+
+    // Image generation
+    if (isImageGen) {
+      const ok = await onConsumeCredit();
+      if (!ok) { setIsLoading(false); toast.error("Crédits épuisés !"); return; }
+      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
+      const assistantId = crypto.randomUUID();
+      setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours..." }]);
+      const result = await generateImage(prompt);
+      if (result.error) {
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `❌ ${result.error}` } : m));
+      } else if (result.imageUrl) {
+        const content = result.text || "Image générée ✨";
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content, image_url: result.imageUrl } : m));
+        if (currentConvId && user) saveMessage(currentConvId, user.id, "assistant", content, result.imageUrl);
+      }
+      setIsLoading(false);
+      onRefreshCredits();
+      return;
+    }
+
     let assistantSoFar = "";
     const assistantId = crypto.randomUUID();
 
@@ -300,7 +324,7 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="/search actualité • Message..."
+            placeholder="/search news • /image prompt • Message..."
             rows={1}
             className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none outline-none text-[15px] max-h-32 py-1 select-text"
             style={{ minHeight: "24px" }}

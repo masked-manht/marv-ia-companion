@@ -42,6 +42,12 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [trashLoading, setTrashLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // Memory state
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memories, setMemories] = useState<any[]>([]);
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [confirmClearMemory, setConfirmClearMemory] = useState(false);
+
   const loadTrash = useCallback(async () => {
     if (!user) return;
     setTrashLoading(true);

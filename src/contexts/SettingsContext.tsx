@@ -54,6 +54,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setVoiceTone = (t: VoiceTone) => { setVoiceToneState(t); localStorage.setItem("marvia-tone", t); };
   const setAiModel = (m: AIModel) => { setAiModelState(m); localStorage.setItem("marvia-model", m); };
   const setAccentColor = (c: AccentColor) => { setAccentColorState(c); localStorage.setItem("marvia-accent", c); };
+  const setIdeMode = (v: boolean) => { setIdeModeState(v); localStorage.setItem("marvia-ide", String(v)); };
 
   useEffect(() => {
     const root = document.documentElement;

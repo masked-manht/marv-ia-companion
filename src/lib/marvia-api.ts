@@ -220,7 +220,12 @@ export async function createConversation(userId: string, title: string, isPro: b
 }
 
 export async function getConversations(userId: string) {
-  const { data, error } = await supabase.from("conversations").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
+  const { data, error } = await supabase.from("conversations").select("*").eq("user_id", userId).is("deleted_at" as any, null).order("updated_at", { ascending: false });
+  return { data, error };
+}
+
+export async function getDeletedConversations(userId: string) {
+  const { data, error } = await supabase.from("conversations").select("*").eq("user_id", userId).not("deleted_at" as any, "is", null).order("deleted_at" as any, { ascending: false });
   return { data, error };
 }
 
@@ -229,7 +234,20 @@ export async function getMessages(conversationId: string) {
   return { data, error };
 }
 
+// Soft delete
 export async function deleteConversation(conversationId: string) {
+  const { error } = await supabase.from("conversations").update({ deleted_at: new Date().toISOString() } as any).eq("id", conversationId);
+  return error;
+}
+
+// Restore from trash
+export async function restoreConversation(conversationId: string) {
+  const { error } = await supabase.from("conversations").update({ deleted_at: null } as any).eq("id", conversationId);
+  return error;
+}
+
+// Permanent delete
+export async function permanentlyDeleteConversation(conversationId: string) {
   const { error } = await supabase.from("conversations").delete().eq("id", conversationId);
   return error;
 }

@@ -38,12 +38,17 @@ export default function AuthPage() {
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
+        extraParams: {
+          prompt: "select_account",
+        },
       });
-      if (result.error) {
-        toast.error("Erreur Google Sign-In");
+      if (result?.error) {
+        console.error("Google OAuth error:", result.error);
+        toast.error("Erreur Google Sign-In. Réessayez.");
       }
     } catch (err: any) {
-      toast.error(err.message || "Erreur");
+      console.error("Google OAuth catch:", err);
+      toast.error(err.message || "Erreur de connexion Google");
     } finally {
       setLoading(false);
     }
@@ -57,7 +62,7 @@ export default function AuthPage() {
           <Sparkles className="w-10 h-10 text-primary" />
         </div>
         <h1 className="text-3xl font-bold text-foreground">Marv-IA</h1>
-        <p className="text-sm text-muted-foreground mt-1">Connecté au réel</p>
+        <p className="text-sm text-muted-foreground mt-1">Votre assistant intelligent</p>
       </div>
 
       {/* Form */}

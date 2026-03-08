@@ -1,16 +1,16 @@
-const CACHE_NAME = 'marvia-v1.3';
+const CACHE_NAME = 'marvia-v1.4';
 const PRECACHE_URLS = [
   '/',
   '/marvia-icon.png',
   '/manifest.json',
 ];
 
-// Block auto-update: do NOT call skipWaiting automatically
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  // Do NOT skipWaiting() — user controls updates manually
+  // Auto-update: skip waiting immediately
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,7 +22,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Listen for manual update trigger from the app
+// Also support manual SKIP_WAITING for backwards compat
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -31,7 +31,19 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  if (event.request.url.includes('/functions/') || event.request.url.includes('supabase')) return;
+
+  const url = new URL(event.request.url);
+
+  // NEVER cache OAuth redirect routes or Supabase/API calls
+  if (
+    url.pathname.startsWith('/~oauth') ||
+    url.pathname.startsWith('/auth/') ||
+    event.request.url.includes('/functions/') ||
+    event.request.url.includes('supabase') ||
+    event.request.url.includes('accounts.google.com')
+  ) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

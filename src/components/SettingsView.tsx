@@ -60,6 +60,33 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
     if (trashOpen) loadTrash();
   }, [trashOpen, loadTrash]);
 
+  const loadMemories = useCallback(async () => {
+    if (!user) return;
+    setMemoryLoading(true);
+    const data = await getUserMemories(user.id);
+    setMemories(data);
+    setMemoryLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (memoryOpen) loadMemories();
+  }, [memoryOpen, loadMemories]);
+
+  const handleDeleteMemory = async (id: string) => {
+    if (!user) return;
+    await deleteMemory(user.id, id);
+    setMemories(prev => prev.filter(m => m.id !== id));
+    toast.success("Souvenir supprimé");
+  };
+
+  const handleClearAllMemories = async () => {
+    if (!user) return;
+    await clearAllMemories(user.id);
+    setMemories([]);
+    setConfirmClearMemory(false);
+    toast.success("Mémoire effacée");
+  };
+
   const handleRestore = async (id: string) => {
     const error = await restoreConversation(id);
     if (error) { toast.error("Erreur de restauration"); return; }

@@ -114,7 +114,26 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       if (isIframe) {
         toast.error("📍 Le GPS ne fonctionne pas dans l'aperçu. Installez ou ouvrez l'app depuis votre navigateur.", { duration: 8000 });
       } else if (locationError === "denied") {
-        toast.error("📍 Localisation bloquée. Allez dans Paramètres → Localisation et autorisez ce site.", { duration: 8000 });
+        const toastId = toast.error(
+          <div className="flex flex-col gap-2">
+            <p className="text-sm">📍 Localisation bloquée par votre navigateur.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  toast.dismiss(toastId);
+                  toast.info("Cliquez sur l'icône 🔒 dans la barre d'adresse → Autorisations → Localisation → Autoriser, puis réessayez.", { duration: 12000 });
+                }}
+                className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium"
+              >
+                Comment activer
+              </button>
+              <button onClick={() => toast.dismiss(toastId)} className="text-xs text-muted-foreground px-2 py-1.5">
+                Fermer
+              </button>
+            </div>
+          </div>,
+          { duration: 15000 }
+        );
       } else {
         toast.error("📍 Impossible d'obtenir la position. Vérifiez que le GPS est activé sur votre appareil.", { duration: 6000 });
       }

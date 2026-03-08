@@ -108,7 +108,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
     return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   };
 
-  const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+  const Section: React.FC<{ icon: React.ReactNode; title: React.ReactNode; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">
       <div className="flex items-center gap-2.5 mb-3 px-1">
         <span className="text-primary">{icon}</span>
@@ -120,7 +120,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
     </div>
   );
 
-  const Row: React.FC<{ label: string; value?: string; children?: React.ReactNode; onClick?: () => void }> = ({ label, value, children, onClick }) => (
+  const Row: React.FC<{ label: React.ReactNode; value?: string; children?: React.ReactNode; onClick?: () => void }> = ({ label, value, children, onClick }) => (
     <div
       className={`flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
@@ -402,15 +402,34 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
         </Section>
 
         {/* Technique */}
-        <Section icon={<Wrench className="w-4 h-4" />} title="Technique">
-          <Row label="Mise à jour">
+        <Section icon={<Wrench className="w-4 h-4" />} title={
+          <span className="flex items-center gap-2">
+            Technique
+            {updateAvailable && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+              </span>
+            )}
+          </span>
+        }>
+          <Row label={
+            <span className="flex items-center gap-2">
+              Mise à jour
+              {updateAvailable && (
+                <span className="text-[10px] font-bold bg-primary/15 text-primary px-2 py-0.5 rounded-full animate-pulse">
+                  ⚠️ Nouvelle version
+                </span>
+              )}
+            </span>
+          }>
             {updateAvailable ? (
               <button
                 onClick={() => { applyUpdate(); toast.success("Mise à jour en cours..."); }}
                 className="flex items-center gap-1.5 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium animate-pulse"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Installer la mise à jour
+                Installer
               </button>
             ) : (
               <button
@@ -430,7 +449,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
                 ) : (
                   <CheckCircle className="w-3.5 h-3.5" />
                 )}
-                {checking ? "Vérification..." : "Vérifier les mises à jour"}
+                {checking ? "Vérification..." : "Vérifier"}
               </button>
             )}
           </Row>

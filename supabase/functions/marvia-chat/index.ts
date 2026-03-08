@@ -7,12 +7,25 @@ const corsHeaders = {
 
 const MARVIA_VERSION = "1.1.0";
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(timezone?: string): string {
+  const tz = timezone || "UTC";
+  // Build date/time in user's local timezone
   const now = new Date();
-  const jours = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-  const mois = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-  const dateStr = `${jours[now.getDay()]} ${now.getDate()} ${mois[now.getMonth()]} ${now.getFullYear()}`;
-  const heureStr = `${now.getHours()}h${String(now.getMinutes()).padStart(2,"0")}`;
+  const formatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: tz,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const timeFormatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const dateStr = formatter.format(now);
+  const heureStr = timeFormatter.format(now).replace(":", "h");
 
   return `Tu es Marv-IA v${MARVIA_VERSION}, un assistant intelligent de dernière génération, alimenté par les modèles IA les plus avancés.
 

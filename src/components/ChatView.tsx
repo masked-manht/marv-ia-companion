@@ -222,8 +222,11 @@ export default function ChatView({ conversationId, onConversationCreated }: Chat
                 ? "bg-primary text-primary-foreground rounded-br-md"
                 : "bg-secondary text-secondary-foreground rounded-bl-md"
             }`}>
-              {msg.image_url && (
+              {msg.image_url && msg.role === "user" && (
                 <img src={msg.image_url} alt="Image" className="rounded-lg mb-2 max-w-full max-h-64 object-contain" />
+              )}
+              {msg.image_url && msg.role === "assistant" && (
+                <ImageBubble src={msg.image_url} caption={msg.content !== "Image générée :" ? undefined : undefined} />
               )}
               <div className="prose prose-sm prose-invert max-w-none break-words text-[15px] leading-relaxed [&_p]:mb-1 [&_ul]:mb-1 [&_ol]:mb-1">
                 <ReactMarkdown>{msg.content}</ReactMarkdown>

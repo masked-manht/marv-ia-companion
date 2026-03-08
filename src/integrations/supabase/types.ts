@@ -140,6 +140,7 @@ export type Database = {
     Functions: {
       consume_credit: { Args: { p_user_id: string }; Returns: number }
       get_or_reset_credits: { Args: { p_user_id: string }; Returns: number }
+      purge_old_deleted_conversations: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

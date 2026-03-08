@@ -297,6 +297,9 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
               ))}
             </div>
           )}
+          <div className="px-4 py-2 text-[10px] text-muted-foreground">
+            Les conversations supprimées sont automatiquement vidées après 30 jours.
+          </div>
         </Section>
 
         {/* Technique */}

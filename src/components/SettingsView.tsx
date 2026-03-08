@@ -1,11 +1,12 @@
-import React from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2 } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { Switch } from "@/components/ui/switch";
 import { isProModel } from "@/hooks/useCredits";
+import { getDeletedConversations, restoreConversation, permanentlyDeleteConversation } from "@/lib/marvia-api";
 import { toast } from "sonner";
 
 const ACCENT_LABELS: Record<AccentColor, { label: string; preview: string }> = {
@@ -20,6 +21,7 @@ const ACCENT_LABELS: Record<AccentColor, { label: string; preview: string }> = {
 interface SettingsViewProps {
   onBack: () => void;
   credits: number;
+  onConversationsChanged?: () => void;
 }
 
 const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
@@ -28,11 +30,50 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
   "google/gemini-2.5-pro": { label: "Gemini 2.5 Pro (Puissant)", pro: true },
 };
 
-export default function SettingsView({ onBack, credits }: SettingsViewProps) {
+export default function SettingsView({ onBack, credits, onConversationsChanged }: SettingsViewProps) {
   const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode } = useSettings();
   const { user, signOut } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
   const { updateAvailable, checking, checkForUpdate, applyUpdate } = useServiceWorker();
+
+  // Trash state
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trashConversations, setTrashConversations] = useState<any[]>([]);
+  const [trashLoading, setTrashLoading] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const loadTrash = useCallback(async () => {
+    if (!user) return;
+    setTrashLoading(true);
+    const { data } = await getDeletedConversations(user.id);
+    setTrashConversations(data || []);
+    setTrashLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (trashOpen) loadTrash();
+  }, [trashOpen, loadTrash]);
+
+  const handleRestore = async (id: string) => {
+    const error = await restoreConversation(id);
+    if (error) { toast.error("Erreur de restauration"); return; }
+    toast.success("Conversation restaurée !");
+    loadTrash();
+    onConversationsChanged?.();
+  };
+
+  const handlePermanentDelete = async (id: string) => {
+    const error = await permanentlyDeleteConversation(id);
+    if (error) { toast.error("Erreur de suppression"); return; }
+    toast.success("Supprimée définitivement");
+    setConfirmDeleteId(null);
+    loadTrash();
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
 
   const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">
@@ -46,8 +87,11 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
     </div>
   );
 
-  const Row: React.FC<{ label: string; value?: string; children?: React.ReactNode }> = ({ label, value, children }) => (
-    <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors">
+  const Row: React.FC<{ label: string; value?: string; children?: React.ReactNode; onClick?: () => void }> = ({ label, value, children, onClick }) => (
+    <div
+      className={`flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors ${onClick ? "cursor-pointer" : ""}`}
+      onClick={onClick}
+    >
       <span className="text-sm text-foreground">{label}</span>
       {children || <span className="text-sm text-muted-foreground">{value}</span>}
     </div>
@@ -178,6 +222,82 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
             </Row>
           </Section>
         )}
+
+        {/* Corbeille */}
+        <Section icon={<Trash2 className="w-4 h-4" />} title="Corbeille">
+          <Row label="Conversations supprimées" onClick={() => setTrashOpen(!trashOpen)}>
+            <div className="flex items-center gap-2">
+              {!trashOpen && trashConversations.length > 0 && (
+                <span className="text-xs bg-destructive/15 text-destructive px-2 py-0.5 rounded-full font-medium">{trashConversations.length}</span>
+              )}
+              <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${trashOpen ? "rotate-90" : ""}`} />
+            </div>
+          </Row>
+          {trashOpen && (
+            <div className="px-3 py-3 space-y-2 max-h-80 overflow-y-auto scrollbar-hide">
+              {trashLoading && (
+                <p className="text-center text-muted-foreground text-xs py-4">Chargement...</p>
+              )}
+              {!trashLoading && trashConversations.length === 0 && (
+                <div className="flex flex-col items-center py-6 opacity-60">
+                  <Trash2 className="w-8 h-8 text-muted-foreground mb-2" />
+                  <p className="text-xs text-muted-foreground">La corbeille est vide</p>
+                </div>
+              )}
+              {trashConversations.map(conv => (
+                <div key={conv.id} className="bg-muted/50 rounded-lg p-2.5 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{conv.title}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Supprimée le {formatDate(conv.deleted_at)}
+                      </p>
+                    </div>
+                    {conv.is_pro && (
+                      <span className="text-[9px] font-bold bg-amber-500/15 text-amber-500 px-1.5 py-0.5 rounded-full flex-shrink-0">PRO</span>
+                    )}
+                  </div>
+                  
+                  {confirmDeleteId === conv.id ? (
+                    <div className="flex items-center gap-2 bg-destructive/10 rounded-lg p-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
+                      <p className="text-[10px] text-destructive flex-1">Supprimer définitivement ? (textes, images, code...)</p>
+                      <button
+                        onClick={() => handlePermanentDelete(conv.id)}
+                        className="text-[10px] font-bold text-destructive-foreground bg-destructive px-2 py-0.5 rounded"
+                      >
+                        Oui
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-[10px] text-muted-foreground px-1.5 py-0.5"
+                      >
+                        Non
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => handleRestore(conv.id)}
+                        className="flex items-center gap-1 flex-1 justify-center py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-medium hover:bg-primary/20 transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Restaurer
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(conv.id)}
+                        className="flex items-center gap-1 flex-1 justify-center py-1.5 rounded-lg bg-destructive/10 text-destructive text-[11px] font-medium hover:bg-destructive/20 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
 
         {/* Technique */}
         <Section icon={<Wrench className="w-4 h-4" />} title="Technique">

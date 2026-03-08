@@ -109,10 +109,10 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Block Pro-only features
+    // Image generation (uses credits)
     const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ");
-    if (isImageGen) {
-      toast.error("La génération d'images est réservée au mode Pro ⚡", { icon: "👑" });
+    if (isImageGen && credits <= 0) {
+      toast.error("Crédits épuisés ! Revenez demain.", { icon: "⚡" });
       return;
     }
 

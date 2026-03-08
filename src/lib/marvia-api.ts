@@ -30,7 +30,7 @@ export async function streamChat({
         "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
-      body: JSON.stringify({ messages, model, timezone: tz }),
+      body: JSON.stringify({ messages, model, timezone: tz, user_id: userId }),
     });
 
     if (!resp.ok) {

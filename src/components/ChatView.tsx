@@ -92,12 +92,18 @@ export default function ChatView({ conversationId, onConversationCreated, credit
   };
 
   const handleLocation = async () => {
+    if (locationActive) {
+      setLocationActive(false);
+      toast("📍 Localisation désactivée");
+      return;
+    }
+    toast("📍 Demande d'accès à votre position...", { duration: 3000 });
     const loc = await requestLocation();
     if (loc) {
       setLocationActive(true);
-      toast.success(`📍 Position activée (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`);
+      toast.success(`📍 Position activée ! (${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)})`, { duration: 4000 });
     } else {
-      toast.error("Impossible d'obtenir la position. Vérifiez les permissions.");
+      toast.error("📍 Accès refusé. Activez la localisation dans les paramètres de votre navigateur/téléphone, puis réessayez.", { duration: 6000 });
     }
   };
 

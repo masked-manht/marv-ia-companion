@@ -180,12 +180,40 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model, timezone } = await req.json();
+    const { messages, model, timezone, user_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     const selectedModel = model || "google/gemini-3-flash-preview";
+
+    // --- Fetch user memories ---
+    let memoriesBlock = "";
+    if (user_id) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const { data: memories } = await supabase
+          .from("user_memories")
+          .select("category, content")
+          .eq("user_id", user_id)
+          .order("updated_at", { ascending: false })
+          .limit(50);
+        if (memories && memories.length > 0) {
+          const categoryLabels: Record<string, string> = {
+            identite: "👤 Identité", lieu: "📍 Lieu", profession: "💼 Profession",
+            preference: "⭐ Préférence", projet: "📋 Projet", relation: "👥 Relation", general: "📝 Général"
+          };
+          memoriesBlock = "\n\nMÉMOIRE UTILISATEUR (informations connues) :\n" +
+            memories.map((m: any) => `- ${categoryLabels[m.category] || "📝"} : ${m.content}`).join("\n") +
+            "\n\nUtilise ces informations naturellement dans tes réponses. Par exemple, appelle l'utilisateur par son prénom si tu le connais. Ne liste PAS ces informations sauf si on te les demande.";
+        }
+      } catch (e) {
+        console.error("Failed to fetch memories:", e);
+      }
+    }
 
     let enrichedMessages = [...messages];
     const lastMsg = enrichedMessages[enrichedMessages.length - 1];

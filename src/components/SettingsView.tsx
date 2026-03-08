@@ -171,6 +171,37 @@ export default function SettingsView({ onBack, credits }: SettingsViewProps) {
 
         {/* Technique */}
         <Section icon={<Wrench className="w-4 h-4" />} title="Technique">
+          <Row label="Mise à jour">
+            {updateAvailable ? (
+              <button
+                onClick={() => { applyUpdate(); toast.success("Mise à jour en cours..."); }}
+                className="flex items-center gap-1.5 text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium animate-pulse"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Installer la mise à jour
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  const hasUpdate = await checkForUpdate();
+                  if (hasUpdate) {
+                    toast.success("Nouvelle version disponible !");
+                  } else {
+                    toast.info("Vous êtes à jour ✓");
+                  }
+                }}
+                disabled={checking}
+                className="flex items-center gap-1.5 text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                {checking ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-3.5 h-3.5" />
+                )}
+                {checking ? "Vérification..." : "Vérifier les mises à jour"}
+              </button>
+            )}
+          </Row>
           <Row label="Modèle IA">
             <select
               value={aiModel}

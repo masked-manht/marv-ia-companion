@@ -114,33 +114,24 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       if (isIframe) {
         toast.error("📍 Le GPS ne fonctionne pas dans l'aperçu. Installez ou ouvrez l'app depuis votre navigateur.", { duration: 8000 });
       } else if (locationError === "denied") {
-        toast.error(
-          (t) => (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm">📍 Localisation bloquée par votre navigateur.</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    // Open browser settings - works on Chrome Android/Desktop
-                    try {
-                      window.open("chrome://settings/content/location", "_blank");
-                    } catch {
-                      // Fallback: explain how to enable
-                      toast.dismiss(t);
-                      toast.info("Ouvrez les paramètres de votre navigateur → Confidentialité → Localisation → Autorisez ce site.", { duration: 10000 });
-                    }
-                  }}
-                  className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium"
-                >
-                  Ouvrir les paramètres
-                </button>
-                <button onClick={() => toast.dismiss(t)} className="text-xs text-muted-foreground px-2 py-1.5">
-                  Fermer
-                </button>
-              </div>
-              <p className="text-[10px] text-muted-foreground">Astuce : cliquez sur l'icône 🔒 dans la barre d'adresse → Autorisations → Localisation</p>
+        const toastId = toast.error(
+          <div className="flex flex-col gap-2">
+            <p className="text-sm">📍 Localisation bloquée par votre navigateur.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  toast.dismiss(toastId);
+                  toast.info("Cliquez sur l'icône 🔒 dans la barre d'adresse → Autorisations → Localisation → Autoriser, puis réessayez.", { duration: 12000 });
+                }}
+                className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-lg font-medium"
+              >
+                Comment activer
+              </button>
+              <button onClick={() => toast.dismiss(toastId)} className="text-xs text-muted-foreground px-2 py-1.5">
+                Fermer
+              </button>
             </div>
-          ),
+          </div>,
           { duration: 15000 }
         );
       } else {

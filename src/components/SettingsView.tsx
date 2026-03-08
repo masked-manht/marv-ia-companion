@@ -108,7 +108,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
     return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   };
 
-  const Section: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode }> = ({ icon, title, children }) => (
+  const Section: React.FC<{ icon: React.ReactNode; title: React.ReactNode; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">
       <div className="flex items-center gap-2.5 mb-3 px-1">
         <span className="text-primary">{icon}</span>
@@ -120,7 +120,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
     </div>
   );
 
-  const Row: React.FC<{ label: string; value?: string; children?: React.ReactNode; onClick?: () => void }> = ({ label, value, children, onClick }) => (
+  const Row: React.FC<{ label: React.ReactNode; value?: string; children?: React.ReactNode; onClick?: () => void }> = ({ label, value, children, onClick }) => (
     <div
       className={`flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}

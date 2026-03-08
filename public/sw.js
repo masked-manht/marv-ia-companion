@@ -1,15 +1,16 @@
-const CACHE_NAME = 'marvia-v1.2';
+const CACHE_NAME = 'marvia-v1.3';
 const PRECACHE_URLS = [
   '/',
   '/marvia-icon.png',
   '/manifest.json',
 ];
 
+// Block auto-update: do NOT call skipWaiting automatically
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
+  // Do NOT skipWaiting() — user controls updates manually
 });
 
 self.addEventListener('activate', (event) => {
@@ -21,10 +22,17 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Listen for manual update trigger from the app
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/functions/') || event.request.url.includes('supabase')) return;
-  
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

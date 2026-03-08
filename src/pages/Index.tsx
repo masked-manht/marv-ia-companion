@@ -8,6 +8,7 @@ import CreditsDisplay from "@/components/CreditsDisplay";
 import AuthPage from "@/components/AuthPage";
 import SplashScreen from "@/components/SplashScreen";
 import VoiceIndicator from "@/components/VoiceIndicator";
+import PermissionsRequest from "@/components/PermissionsRequest";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useVoice } from "@/hooks/useVoice";
@@ -29,6 +30,14 @@ const Index = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [showPermissions, setShowPermissions] = useState(false);
+
+  // Show permissions dialog after first login
+  useEffect(() => {
+    if (user && !localStorage.getItem("marvia-permissions-asked")) {
+      setShowPermissions(true);
+    }
+  }, [user]);
 
   const loadConversations = useCallback(async () => {
     if (!user) return;

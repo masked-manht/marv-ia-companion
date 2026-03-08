@@ -97,14 +97,36 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       toast("📍 Localisation désactivée");
       return;
     }
-    toast("📡 Acquisition GPS haute précision...", { duration: 5000 });
+
+    // Check if geolocation is available
+    if (!navigator.geolocation) {
+      toast.error("📍 Géolocalisation non disponible sur ce navigateur.", { duration: 5000 });
+      return;
+    }
+
+    // Check permission status first if available
+    try {
+      const perm = await navigator.permissions?.query({ name: "geolocation" });
+      if (perm?.state === "denied") {
+        toast.error("📍 Localisation bloquée. Allez dans les paramètres de votre navigateur → Autorisations → Localisation, puis autorisez ce site.", { duration: 8000 });
+        return;
+      }
+    } catch {}
+
+    toast("📡 Acquisition GPS...", { duration: 3000 });
     const loc = await requestLocation();
     if (loc) {
       setLocationActive(true);
       const alt = loc.altitude ? ` | Alt: ${loc.altitude.toFixed(0)}m` : "";
       toast.success(`📡 GPS verrouillé ! Précision: ${loc.accuracy.toFixed(0)}m${alt}`, { duration: 4000 });
     } else {
-      toast.error("📍 Accès refusé. Activez la localisation dans les paramètres de votre navigateur/téléphone, puis réessayez.", { duration: 6000 });
+      // Distinguish iframe restriction from actual denial
+      const isIframe = window.self !== window.top;
+      if (isIframe) {
+        toast.error("📍 Le GPS ne fonctionne pas dans l'aperçu. Publiez l'app et ouvrez-la directement dans votre navigateur.", { duration: 8000 });
+      } else {
+        toast.error("📍 Accès refusé. Activez la localisation dans les paramètres de votre navigateur/téléphone, puis réessayez.", { duration: 6000 });
+      }
     }
   };
 

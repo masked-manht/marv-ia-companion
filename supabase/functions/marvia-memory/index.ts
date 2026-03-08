@@ -86,26 +86,26 @@ serve(async (req) => {
         .join("\n");
 
       // Use AI to extract key facts
-      const extractPrompt = `Analyse cette conversation et extrais les informations PERSONNELLES importantes sur l'UTILISATEUR (pas sur l'assistant).
+      const extractPrompt = `Analyse cette conversation et extrais les informations importantes sur l'UTILISATEUR (pas sur l'assistant).
 
-Extrais UNIQUEMENT :
+Extrais :
 - Prénom / nom de l'utilisateur
-- Lieu de résidence, pays, ville
-- Profession / métier / études
-- Préférences (langues, sujets d'intérêt, hobbies)
+- Lieu de résidence, pays, ville, quartier
+- Profession / métier / études / compétences
+- Préférences (langues parlées, sujets d'intérêt, hobbies, goûts)
 - Projets en cours mentionnés
-- Relations (famille, amis mentionnés)
-- Toute information personnelle que l'utilisateur a partagée
+- Relations (famille, amis, collègues mentionnés)
+- Style de communication (ex: "utilise beaucoup d'emojis", "parle en créole haïtien", "ton familier", "messages courts", "aime l'humour")
+- Humeur ou personnalité générale observée (ex: "enthousiaste", "curieux", "direct")
+- Toute autre information personnelle partagée
 
 Règles :
-- Retourne UNIQUEMENT des faits explicitement mentionnés par l'utilisateur
+- UNIQUEMENT des faits EXPLICITEMENT présents dans la conversation
 - NE déduis PAS d'informations non dites
 - NE retourne PAS d'informations sur l'assistant
-- Chaque fait doit être une phrase courte et claire
-- Si aucune information personnelle n'est trouvée, retourne un tableau vide
-
-Retourne un JSON avec ce format exact :
-{"facts": [{"category": "identite|lieu|profession|preference|projet|relation", "content": "phrase courte"}]}
+- Chaque fait = une phrase courte et claire
+- Si rien de personnel → tableau vide
+- Évite les doublons avec des faits trop similaires
 
 Conversation :
 ${convText}`;
@@ -132,7 +132,7 @@ ${convText}`;
                     items: {
                       type: "object",
                       properties: {
-                        category: { type: "string", enum: ["identite", "lieu", "profession", "preference", "projet", "relation"] },
+                        category: { type: "string", enum: ["identite", "lieu", "profession", "preference", "projet", "relation", "style", "humeur"] },
                         content: { type: "string" }
                       },
                       required: ["category", "content"],

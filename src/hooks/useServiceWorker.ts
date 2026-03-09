@@ -117,12 +117,12 @@ export function useServiceWorker() {
     if (registration?.waiting) {
       registration.waiting.postMessage("SKIP_WAITING");
     } else {
-      if ("caches" in window) {
+      if (typeof caches !== "undefined") {
         caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).then(() => {
-          window.location.reload();
+          location.reload();
         });
       } else {
-        window.location.reload();
+        location.reload();
       }
     }
   }, [registration]);

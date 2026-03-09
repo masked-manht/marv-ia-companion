@@ -30,46 +30,10 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Try images/generations endpoint first
-    const imgResponse = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        prompt,
-        n: 1,
-        size: "1024x1024",
-      }),
-    });
+    // Enhance the prompt for better image quality
+    const enhancedPrompt = `Create a high-quality, detailed image: ${prompt}. Professional quality, vivid colors, sharp details.`;
 
-    if (imgResponse.ok) {
-      const imgData = await imgResponse.json();
-      const imageUrl = extractImageUrl(imgData);
-      if (imageUrl) {
-        const text = imgData?.choices?.[0]?.message?.content || "Image générée ✨";
-        return new Response(JSON.stringify({ imageUrl, text }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
-      const status = imgResponse.status;
-      await imgResponse.text(); // consume body
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte. Réessayez." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Crédits épuisés." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    // Fallback: chat completions with gemini-2.5-flash-image
+    // Use chat completions with image modality (most reliable)
     const chatResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -78,25 +42,17 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: `Generate an image of: ${prompt}` }],
+        messages: [{ role: "user", content: enhancedPrompt }],
         modalities: ["image", "text"],
       }),
     });
 
-    if (chatResponse.ok) {
-      const chatData = await chatResponse.json();
-      const imageUrl = extractImageUrl(chatData);
-      if (imageUrl) {
-        const text = chatData?.choices?.[0]?.message?.content || "Image générée ✨";
-        return new Response(JSON.stringify({ imageUrl, text }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
+    if (!chatResponse.ok) {
       const status = chatResponse.status;
-      await chatResponse.text();
+      const errText = await chatResponse.text();
+      console.error("Image gen failed:", status, errText);
       if (status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte. Réessayez." }), {
+        return new Response(JSON.stringify({ error: "Limite de requêtes atteinte. Réessayez dans quelques secondes." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -105,7 +61,23 @@ serve(async (req) => {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      return new Response(JSON.stringify({ error: `Erreur de génération (${status}). Réessayez.` }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    const chatData = await chatResponse.json();
+    console.log("Image gen response keys:", JSON.stringify(Object.keys(chatData)));
+    
+    const imageUrl = extractImageUrl(chatData);
+    if (imageUrl) {
+      const text = chatData?.choices?.[0]?.message?.content || "Image générée ✨";
+      return new Response(JSON.stringify({ imageUrl, text }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.error("No image in response:", JSON.stringify(chatData).slice(0, 500));
 
     return new Response(JSON.stringify({ error: "Aucune image générée. Essayez un prompt différent." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

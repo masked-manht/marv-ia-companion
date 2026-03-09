@@ -189,7 +189,11 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (isImageGen) {
       const ok = await onConsumeCredit();
       if (!ok) { setIsLoading(false); toast.error("Crédits épuisés !"); return; }
-      const prompt = trimmed.replace(/^\/(image|img)\s+/i, "").replace(imageKeywords, "").trim() || trimmed;
+      // Extract the descriptive part as prompt - remove command prefix but keep the full description
+      let prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
+      // Remove leading verbs like "dessine moi", "crée un", etc. but keep the subject
+      prompt = prompt.replace(/^(génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make|illustre|montre|affiche|produis|conçois|fabrique|peins|trace|compose|réalise|realise|rends|render|design|sketch|craft|show|représente|visualise|je veux|j'aimerais|peux-tu|tu peux|peut-tu|pourrais-tu|est-ce que tu peux)\s*([-]?\s*(moi|me|nous))?\s*/i, "").trim();
+      if (!prompt || prompt.length < 3) prompt = trimmed;
       const assistantId = crypto.randomUUID();
       setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours..." }]);
       const result = await generateImage(prompt);

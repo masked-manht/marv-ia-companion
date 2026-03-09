@@ -85,30 +85,28 @@ export function useLocation() {
         else setError("unavailable");
       };
 
-      // Strategy 1: Fast cached reading (responds in <1s usually)
+      // Strategy 1: Fast cached reading - accept ANY accuracy
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const reading = toReading(pos);
           console.log("[GPS] Fast reading:", reading.accuracy.toFixed(0) + "m");
           bestReadingRef.current = reading;
           setLocation(reading);
-          if (reading.accuracy <= 50) {
-            resolved = true;
-            setLoading(false);
-            resolve(reading);
-          }
+          // Accept immediately if any reading obtained
+          resolved = true;
+          setLoading(false);
+          resolve(reading);
         },
         (err) => {
           console.warn("[GPS] Fast reading failed:", err.message);
-          handleError(err);
+          // Don't set error yet, try high accuracy
         },
-        { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
       );
 
-      // Strategy 2: High-accuracy watch (refines over time)
+      // Strategy 2: High-accuracy refinement (non-blocking)
       const watchId = navigator.geolocation.watchPosition(
         (pos) => {
-          if (resolved) return;
           const reading = toReading(pos);
           console.log("[GPS] Watch reading:", reading.accuracy.toFixed(0) + "m");
 
@@ -117,25 +115,34 @@ export function useLocation() {
             setLocation(reading);
           }
 
-          if (reading.accuracy <= 30) {
+          // If already resolved, just update silently; if not, resolve now
+          if (!resolved) {
+            resolved = true;
+            setLoading(false);
+            resolve(reading);
+          }
+
+          // Stop watching once we have good accuracy
+          if (reading.accuracy <= 100) {
             navigator.geolocation.clearWatch(watchId);
-            done();
           }
         },
         (err) => {
           console.warn("[GPS] Watch error:", err.message);
-          handleError(err);
-          navigator.geolocation.clearWatch(watchId);
-          done();
+          if (!resolved) {
+            handleError(err);
+            navigator.geolocation.clearWatch(watchId);
+            done();
+          }
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
       );
 
-      // Fallback: after 4s return best reading
+      // Fallback: after 8s return whatever we have
       setTimeout(() => {
         navigator.geolocation.clearWatch(watchId);
         done();
-      }, 4000);
+      }, 8000);
     });
   }, []);
 

@@ -213,8 +213,14 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           <Row label="Activer le Mode IDE">
             <Switch checked={ideMode} onCheckedChange={setIdeMode} />
           </Row>
+          {ideMode && (
+            <Row label="Sauvegarde automatique">
+              <Switch checked={ideAutoSave} onCheckedChange={setIdeAutoSave} />
+            </Row>
+          )}
           <div className="px-4 py-2 text-xs text-muted-foreground">
             <p>Éditeur de code intégré avec prévisualisation en direct, console et assistant IA.</p>
+            {ideMode && <p className="mt-1">La sauvegarde auto enregistre vos fichiers en local toutes les 5 secondes.</p>}
           </div>
         </Section>
 

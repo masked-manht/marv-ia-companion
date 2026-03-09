@@ -30,6 +30,8 @@ type SettingsContextType = {
   setAccentColor: (c: AccentColor) => void;
   ideMode: boolean;
   setIdeMode: (v: boolean) => void;
+  ideAutoSave: boolean;
+  setIdeAutoSave: (v: boolean) => void;
 };
 
 const SettingsContext = createContext<SettingsContextType>({} as SettingsContextType);

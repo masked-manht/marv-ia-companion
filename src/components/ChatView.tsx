@@ -148,11 +148,13 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Image generation detection - explicit commands + natural language
+    // Image generation detection - explicit commands + natural language (très large)
     const imageKeywords = /^(génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make|illustre|montre|affiche|produis|conçois|fabrique|peins|trace|compose|réalise|realise|rends|render|design|sketch|craft|show)\s*([\s-]?(moi|me|nous|un|une|le|la|les|du|des|l'))?\s*(une? |l[ea]? |des |du )?(image|photo|illustration|logo|dessin|picture|artwork|affiche|poster|icon|icône|bannière|banner|portrait|avatar|fond|wallpaper|graphique|graphic|visuel|visual|schéma|schema|infographie|mockup|maquette|art|peinture|painting|sketch|croquis|thumbnail|miniature|cover|couverture)/i;
-    // Also detect "je veux un logo", "un logo de...", "créer un logo", etc.
-    const directObjectKeywords = /^(je veux|j'aimerais|j'ai besoin d'|fais|fait|créer?|crée|dessine|génère|imagine)\s.*(logo|image|photo|illustration|dessin|affiche|poster|icône|icon|bannière|banner|portrait|avatar|fond|wallpaper|visuel|art|peinture)/i;
-    const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ") || imageKeywords.test(trimmed) || directObjectKeywords.test(trimmed);
+    // Detect requests with object first: "un logo de...", "une image de...", "je veux un logo"
+    const directObjectKeywords = /^(je veux|j'aimerais|j'ai besoin d'?|fais|fait|créer?|crée|dessine|génère|imagine|donne|montre|peux-tu|tu peux|peut-tu|pourrais-tu)\s.*(logo|image|photo|illustration|dessin|affiche|poster|icône|icon|bannière|banner|portrait|avatar|fond|wallpaper|visuel|art|peinture|artwork)/i;
+    // Detect "un logo ...", "une image ...", even without verb
+    const nounFirstPattern = /^(un|une|le|la|des|du|mon|ma|mes|notre|nos|votre|vos|ton|ta|tes)\s+(logo|image|photo|illustration|dessin|affiche|poster|icône|icon|bannière|banner|portrait|avatar|fond|wallpaper|visuel|art|peinture|artwork)\b/i;
+    const isImageGen = trimmed.toLowerCase().startsWith("/image ") || trimmed.toLowerCase().startsWith("/img ") || imageKeywords.test(trimmed) || directObjectKeywords.test(trimmed) || nounFirstPattern.test(trimmed);
     if (isImageGen && credits <= 0) {
       toast.error("Crédits épuisés ! Revenez demain.", { icon: "⚡" });
       return;

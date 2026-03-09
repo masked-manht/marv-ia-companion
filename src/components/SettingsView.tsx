@@ -31,7 +31,7 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
 };
 
 export default function SettingsView({ onBack, credits, onConversationsChanged }: SettingsViewProps) {
-  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode } = useSettings();
+  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode, ideAutoSave, setIdeAutoSave } = useSettings();
   const { user, signOut } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
   const { updateAvailable, checking, checkForUpdate, applyUpdate } = useServiceWorker();

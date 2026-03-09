@@ -13,8 +13,18 @@ export function useNotifications() {
     return result === "granted";
   }, [supported]);
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      const audio = new Audio("/notification.mp3");
+      audio.volume = 0.7;
+      audio.play().catch(() => {});
+    } catch { /* ignore */ }
+  }, []);
+
   const sendLocalNotification = useCallback((title: string, body: string) => {
     if (permission !== "granted") return;
+    
+    playNotificationSound();
     
     navigator.serviceWorker.ready.then((reg) => {
       reg.showNotification(title, {
@@ -25,7 +35,7 @@ export function useNotifications() {
     }).catch(() => {
       new Notification(title, { body, icon: "/marvia-icon.png" });
     });
-  }, [permission]);
+  }, [permission, playNotificationSound]);
 
   return { permission, supported, requestPermission, sendLocalNotification };
 }

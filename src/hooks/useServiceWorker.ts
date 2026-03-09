@@ -7,23 +7,31 @@ export function useServiceWorker() {
   const [checking, setChecking] = useState(false);
   const toastShownRef = useRef(false);
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      const audio = new Audio("/notification.mp3");
+      audio.volume = 0.7;
+      audio.play().catch(() => {});
+    } catch { /* ignore */ }
+  }, []);
+
   const showUpdateToast = useCallback(() => {
     if (toastShownRef.current) return;
     toastShownRef.current = true;
+    playNotificationSound();
     toast.error("⚠️ Nouvelle mise à jour disponible !", {
       description: "Rendez-vous dans Paramètres → Technique → Installer la mise à jour.",
       duration: Infinity,
       action: {
         label: "Installer",
         onClick: () => {
-          // Try to apply update directly
           navigator.serviceWorker.getRegistration().then((reg) => {
             if (reg?.waiting) reg.waiting.postMessage("SKIP_WAITING");
           });
         },
       },
     });
-  }, []);
+  }, [playNotificationSound]);
 
   const sendUpdateNotification = useCallback(() => {
     if ("Notification" in window && Notification.permission === "granted") {

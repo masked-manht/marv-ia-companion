@@ -28,10 +28,16 @@ interface IDEViewProps {
 }
 
 export default function IDEView({ onBack }: IDEViewProps) {
-  const { aiModel, responseStyle } = useSettings();
+  const { aiModel, responseStyle, ideAutoSave } = useSettings();
   const { startListening } = useVoice();
   
-  const [files, setFiles] = useState<FileTab[]>(DEFAULT_FILES);
+  const [files, setFiles] = useState<FileTab[]>(() => {
+    const saved = localStorage.getItem("marvia-ide-files");
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return DEFAULT_FILES;
+  });
   const [activeFileId, setActiveFileId] = useState("html");
   
   // Mobile: single active tab; Desktop: split view

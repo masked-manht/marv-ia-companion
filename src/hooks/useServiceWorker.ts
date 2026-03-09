@@ -94,13 +94,17 @@ export function useServiceWorker() {
       console.warn("SW registration failed:", err);
     });
 
-    // Auto-reload on controller change (new SW activated)
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (refreshing) return;
-      refreshing = true;
+    // When user clicks "Installer", the new SW activates and controllerchange fires
+    // We reload ONLY when the user has explicitly triggered the update
+    let userTriggeredUpdate = false;
+    const onControllerChange = () => {
+      if (!userTriggeredUpdate) return;
       window.location.reload();
-    });
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+
+    // Expose trigger for applyUpdate
+    (window as any).__marviaUserTriggeredUpdate = () => { userTriggeredUpdate = true; };
 
     return () => {
       if (pollTimer) clearInterval(pollTimer);
@@ -108,16 +112,17 @@ export function useServiceWorker() {
   }, [handleNewWorker]);
 
   const applyUpdate = useCallback(() => {
+    // Signal that user explicitly wants to update
+    (window as any).__marviaUserTriggeredUpdate?.();
     if (registration?.waiting) {
       registration.waiting.postMessage("SKIP_WAITING");
     } else {
-      // No waiting worker — force hard reload
-      if ("caches" in window) {
+      if (typeof caches !== "undefined") {
         caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).then(() => {
-          globalThis.location.reload();
+          location.reload();
         });
       } else {
-        globalThis.location.reload();
+        location.reload();
       }
     }
   }, [registration]);

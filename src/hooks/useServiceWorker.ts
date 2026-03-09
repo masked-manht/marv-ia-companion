@@ -10,12 +10,17 @@ export function useServiceWorker() {
   const showUpdateToast = useCallback(() => {
     if (toastShownRef.current) return;
     toastShownRef.current = true;
-    toast("⚠️ Nouvelle mise à jour disponible !", {
+    toast.error("⚠️ Nouvelle mise à jour disponible !", {
       description: "Rendez-vous dans Paramètres → Technique → Installer la mise à jour.",
       duration: Infinity,
       action: {
-        label: "OK",
-        onClick: () => {},
+        label: "Installer",
+        onClick: () => {
+          // Try to apply update directly
+          navigator.serviceWorker.getRegistration().then((reg) => {
+            if (reg?.waiting) reg.waiting.postMessage("SKIP_WAITING");
+          });
+        },
       },
     });
   }, []);

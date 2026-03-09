@@ -112,16 +112,17 @@ export function useServiceWorker() {
   }, [handleNewWorker]);
 
   const applyUpdate = useCallback(() => {
+    // Signal that user explicitly wants to update
+    (window as any).__marviaUserTriggeredUpdate?.();
     if (registration?.waiting) {
       registration.waiting.postMessage("SKIP_WAITING");
     } else {
-      // No waiting worker — force hard reload
       if ("caches" in window) {
         caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).then(() => {
-          globalThis.location.reload();
+          window.location.reload();
         });
       } else {
-        globalThis.location.reload();
+        window.location.reload();
       }
     }
   }, [registration]);

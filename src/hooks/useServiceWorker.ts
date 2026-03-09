@@ -114,10 +114,10 @@ export function useServiceWorker() {
       // No waiting worker — force hard reload
       if ("caches" in window) {
         caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).then(() => {
-          window.location.reload();
+          globalThis.location.reload();
         });
       } else {
-        window.location.reload();
+        globalThis.location.reload();
       }
     }
   }, [registration]);

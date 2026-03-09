@@ -348,7 +348,7 @@ ${jsFile?.content || ""}
           <button onClick={handleExport} className="p-1.5 text-[#4A5568] hover:text-[#007BFF] transition-colors" title="Exporter">
             <Download className="w-4 h-4" />
           </button>
-          <button onClick={() => setFiles(DEFAULT_FILES)} className="p-1.5 text-[#4A5568] hover:text-[#E2E8F0] transition-colors" title="Réinitialiser">
+          <button onClick={() => { setFiles(DEFAULT_FILES); localStorage.removeItem("marvia-ide-files"); }} className="p-1.5 text-[#4A5568] hover:text-[#E2E8F0] transition-colors" title="Réinitialiser">
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>

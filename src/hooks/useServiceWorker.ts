@@ -20,13 +20,18 @@ export function useServiceWorker() {
     toastShownRef.current = true;
     playNotificationSound();
     toast.error("⚠️ Nouvelle mise à jour disponible !", {
-      description: "Rendez-vous dans Paramètres → Technique → Installer la mise à jour.",
+      description: "Appuyez sur Installer pour mettre à jour maintenant.",
       duration: Infinity,
       action: {
         label: "Installer",
         onClick: () => {
           navigator.serviceWorker.getRegistration().then((reg) => {
-            if (reg?.waiting) reg.waiting.postMessage("SKIP_WAITING");
+            if (reg?.waiting) {
+              reg.waiting.postMessage("SKIP_WAITING");
+            } else {
+              // Force reload if no waiting worker
+              window.location.reload();
+            }
           });
         },
       },
@@ -36,38 +41,39 @@ export function useServiceWorker() {
   const sendUpdateNotification = useCallback(() => {
     if ("Notification" in window && Notification.permission === "granted") {
       navigator.serviceWorker.ready.then((reg) => {
-        reg.showNotification("Marv-IA", {
-          body: "⚠️ Une nouvelle mise à jour est disponible ! Ouvrez les paramètres pour l'installer.",
+        reg.showNotification("Marv-IA ⚠️", {
+          body: "Nouvelle mise à jour disponible ! Ouvrez l'app pour installer.",
           icon: "/marvia-icon.png",
           badge: "/marvia-icon.png",
           tag: "marvia-update",
           renotify: true,
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
         } as any);
-      }).catch(() => {
-        try {
-          new Notification("Marv-IA", {
-            body: "⚠️ Une nouvelle mise à jour est disponible !",
-            icon: "/marvia-icon.png",
-          });
-        } catch { /* ignore */ }
-      });
+      }).catch(() => {});
     }
   }, []);
+
+  const handleNewWorker = useCallback((reg: ServiceWorkerRegistration) => {
+    setUpdateAvailable(true);
+    setRegistration(reg);
+    showUpdateToast();
+    sendUpdateNotification();
+  }, [showUpdateToast, sendUpdateNotification]);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    navigator.serviceWorker.register("/sw.js").then((reg) => {
+    let pollTimer: ReturnType<typeof setInterval>;
+
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((reg) => {
       setRegistration(reg);
 
-      // Immediately check if there's a waiting worker
       if (reg.waiting) {
-        setUpdateAvailable(true);
-        showUpdateToast();
-        sendUpdateNotification();
+        handleNewWorker(reg);
       }
 
-      // Also proactively check for updates on every app open
+      // Force check on load
       reg.update().catch(() => {});
 
       reg.addEventListener("updatefound", () => {
@@ -75,54 +81,60 @@ export function useServiceWorker() {
         if (!newWorker) return;
         newWorker.addEventListener("statechange", () => {
           if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-            setUpdateAvailable(true);
-            showUpdateToast();
-            sendUpdateNotification();
+            handleNewWorker(reg);
           }
         });
       });
+
+      // Poll every 30s for updates (catches missed realtime events)
+      pollTimer = setInterval(() => {
+        reg.update().catch(() => {});
+      }, 30_000);
     }).catch((err) => {
       console.warn("SW registration failed:", err);
     });
 
-    // Also check existing registration
-    navigator.serviceWorker.getRegistration().then((reg) => {
-      if (reg?.waiting) {
-        setUpdateAvailable(true);
-        setRegistration(reg);
-        showUpdateToast();
-        sendUpdateNotification();
-      }
-    });
-
+    // Auto-reload on controller change (new SW activated)
+    let refreshing = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
       window.location.reload();
     });
-  }, [showUpdateToast, sendUpdateNotification]);
+
+    return () => {
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [handleNewWorker]);
 
   const applyUpdate = useCallback(() => {
-    if (!registration?.waiting) return;
-    registration.waiting.postMessage("SKIP_WAITING");
+    if (registration?.waiting) {
+      registration.waiting.postMessage("SKIP_WAITING");
+    } else {
+      // No waiting worker — force hard reload
+      if ("caches" in window) {
+        caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).then(() => {
+          globalThis.location.reload();
+        });
+      } else {
+        globalThis.location.reload();
+      }
+    }
   }, [registration]);
 
   const checkForUpdate = useCallback(async () => {
-    if (!registration) {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) {
-          setRegistration(reg);
-          await reg.update();
-        }
-      } catch { /* ignore */ }
-      return false;
-    }
-
     setChecking(true);
     toastShownRef.current = false;
     try {
-      await registration.update();
-      await new Promise((r) => setTimeout(r, 1000));
-      const hasUpdate = !!registration.waiting;
+      const reg = registration || await navigator.serviceWorker.getRegistration();
+      if (!reg) return false;
+
+      setRegistration(reg);
+      await reg.update();
+      // Brief wait for statechange to fire
+      await new Promise((r) => setTimeout(r, 500));
+
+      const hasUpdate = !!reg.waiting;
       setUpdateAvailable(hasUpdate);
       if (hasUpdate) {
         showUpdateToast();

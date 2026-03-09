@@ -62,6 +62,15 @@ export default function IDEView({ onBack }: IDEViewProps) {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content } : f));
   }, [activeFileId]);
 
+  // Auto-save to localStorage every 5 seconds
+  useEffect(() => {
+    if (!ideAutoSave) return;
+    const interval = setInterval(() => {
+      localStorage.setItem("marvia-ide-files", JSON.stringify(files));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [files, ideAutoSave]);
+
   const handleConsoleMessage = useCallback((msg: ConsoleMessage) => {
     setConsoleMessages(prev => [...prev.slice(-200), msg]);
   }, []);

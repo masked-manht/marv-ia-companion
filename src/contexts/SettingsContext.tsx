@@ -49,6 +49,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [aiModel, setAiModelState] = useState<AIModel>(() => (localStorage.getItem("marvia-model") as AIModel) || "google/gemini-3-flash-preview");
   const [accentColor, setAccentColorState] = useState<AccentColor>(() => (localStorage.getItem("marvia-accent") as AccentColor) || "green");
   const [ideMode, setIdeModeState] = useState(() => localStorage.getItem("marvia-ide") === "true");
+  const [ideAutoSave, setIdeAutoSaveState] = useState(() => localStorage.getItem("marvia-ide-autosave") !== "false");
 
   const setTheme = (t: Theme) => { setThemeState(t); localStorage.setItem("marvia-theme", t); };
   const setResponseStyle = (s: ResponseStyle) => { setResponseStyleState(s); localStorage.setItem("marvia-style", s); };
@@ -57,6 +58,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setAiModel = (m: AIModel) => { setAiModelState(m); localStorage.setItem("marvia-model", m); };
   const setAccentColor = (c: AccentColor) => { setAccentColorState(c); localStorage.setItem("marvia-accent", c); };
   const setIdeMode = (v: boolean) => { setIdeModeState(v); localStorage.setItem("marvia-ide", String(v)); };
+  const setIdeAutoSave = (v: boolean) => { setIdeAutoSaveState(v); localStorage.setItem("marvia-ide-autosave", String(v)); };
 
   useEffect(() => {
     const root = document.documentElement;

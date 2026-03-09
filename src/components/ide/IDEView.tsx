@@ -28,10 +28,16 @@ interface IDEViewProps {
 }
 
 export default function IDEView({ onBack }: IDEViewProps) {
-  const { aiModel, responseStyle } = useSettings();
+  const { aiModel, responseStyle, ideAutoSave } = useSettings();
   const { startListening } = useVoice();
   
-  const [files, setFiles] = useState<FileTab[]>(DEFAULT_FILES);
+  const [files, setFiles] = useState<FileTab[]>(() => {
+    const saved = localStorage.getItem("marvia-ide-files");
+    if (saved) {
+      try { return JSON.parse(saved); } catch { /* ignore */ }
+    }
+    return DEFAULT_FILES;
+  });
   const [activeFileId, setActiveFileId] = useState("html");
   
   // Mobile: single active tab; Desktop: split view
@@ -55,6 +61,15 @@ export default function IDEView({ onBack }: IDEViewProps) {
   const updateFileContent = useCallback((content: string) => {
     setFiles(prev => prev.map(f => f.id === activeFileId ? { ...f, content } : f));
   }, [activeFileId]);
+
+  // Auto-save to localStorage every 5 seconds
+  useEffect(() => {
+    if (!ideAutoSave) return;
+    const interval = setInterval(() => {
+      localStorage.setItem("marvia-ide-files", JSON.stringify(files));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [files, ideAutoSave]);
 
   const handleConsoleMessage = useCallback((msg: ConsoleMessage) => {
     setConsoleMessages(prev => [...prev.slice(-200), msg]);
@@ -333,7 +348,7 @@ ${jsFile?.content || ""}
           <button onClick={handleExport} className="p-1.5 text-[#4A5568] hover:text-[#007BFF] transition-colors" title="Exporter">
             <Download className="w-4 h-4" />
           </button>
-          <button onClick={() => setFiles(DEFAULT_FILES)} className="p-1.5 text-[#4A5568] hover:text-[#E2E8F0] transition-colors" title="Réinitialiser">
+          <button onClick={() => { setFiles(DEFAULT_FILES); localStorage.removeItem("marvia-ide-files"); }} className="p-1.5 text-[#4A5568] hover:text-[#E2E8F0] transition-colors" title="Réinitialiser">
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>

@@ -113,7 +113,7 @@ export function useServiceWorker() {
     toastShownRef.current = false;
     try {
       await registration.update();
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 1000));
       const hasUpdate = !!registration.waiting;
       setUpdateAvailable(hasUpdate);
       if (hasUpdate) {

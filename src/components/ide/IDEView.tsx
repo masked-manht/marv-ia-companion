@@ -660,7 +660,7 @@ ${codeContext}`
         </div>
 
         {/* Mobile bottom tab bar — VS Code style */}
-        <div className="flex items-center bg-[#0B0F15] border-t border-[#1E2433] flex-shrink-0 safe-bottom">
+        <div className={`flex items-center border-t flex-shrink-0 safe-bottom ${isDark ? "bg-[#0B0F15] border-[#1E2433]" : "bg-[#F6F8FA] border-[#D0D7DE]"}`}>
           {([
             { id: "editor" as MobileTab, icon: Code2, label: "Éditeur" },
             { id: "preview" as MobileTab, icon: Globe, label: "Aperçu" },

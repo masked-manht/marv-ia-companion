@@ -517,9 +517,9 @@ ${codeContext}`
         {/* Breadcrumb */}
         <div className="flex items-center gap-1 flex-1 min-w-0 text-[11px]">
           <Code2 className="w-3.5 h-3.5 text-[#007BFF] flex-shrink-0" />
-          <span className="text-[#4A5568]">Marv-IA</span>
-          <ChevronRight className="w-3 h-3 text-[#3D4450]" />
-          <span className="text-[#8B949E] truncate">{activeFile.name}</span>
+          <span className={isDark ? "text-[#4A5568]" : "text-[#656D76]"}>Marv-IA</span>
+          <ChevronRight className={`w-3 h-3 ${isDark ? "text-[#3D4450]" : "text-[#8C959F]"}`} />
+          <span className={`truncate ${isDark ? "text-[#8B949E]" : "text-[#24292F]"}`}>{activeFile.name}</span>
         </div>
 
         {/* Header actions */}

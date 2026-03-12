@@ -68,7 +68,7 @@ export default function ConsolePanel({ messages, onClear, onCommand, ideTheme = 
   return (
     <div className={`flex flex-col h-full font-mono text-xs ${isDark ? "bg-[#0A0E14]" : "bg-[#FAFBFC]"}`}>
       {/* Console header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1E2433] bg-[#0D1117] flex-shrink-0">
+      <div className={`flex items-center justify-between px-3 py-1.5 border-b flex-shrink-0 ${isDark ? "border-[#1E2433] bg-[#0D1117]" : "border-[#D0D7DE] bg-[#F6F8FA]"}`}>
         <div className="flex items-center gap-2">
           <TermIcon className="w-3.5 h-3.5 text-[#007BFF]" />
           <span className="text-[10px] font-semibold text-[#4A5568] uppercase tracking-[0.12em]">Terminal</span>

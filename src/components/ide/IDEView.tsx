@@ -509,7 +509,7 @@ ${codeContext}`
   return (
     <div className="flex flex-col h-screen select-none" style={{ background: isDark ? "#0A0E14" : "#FFFFFF" }}>
       {/* ===== HEADER BAR ===== */}
-      <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-[#1E2433] bg-[#0D1117] flex-shrink-0" style={{ minHeight: "38px" }}>
+      <div className={`flex items-center gap-1.5 px-2 py-1.5 border-b flex-shrink-0 ${isDark ? "border-[#1E2433] bg-[#0D1117]" : "border-[#D0D7DE] bg-[#F6F8FA]"}`} style={{ minHeight: "38px" }}>
         <button onClick={onBack} className="text-[#4A5568] hover:text-[#E2E8F0] transition-colors p-1 rounded hover:bg-[#1A1F2E]">
           <ArrowLeft className="w-4 h-4" />
         </button>

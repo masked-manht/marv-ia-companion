@@ -11,6 +11,7 @@ interface ConsolePanelProps {
   messages: ConsoleMessage[];
   onClear: () => void;
   onCommand?: (cmd: string) => void;
+  ideTheme?: "dark" | "light";
 }
 
 const TYPE_STYLES: Record<string, { color: string; icon: React.ReactNode; bg: string }> = {
@@ -20,7 +21,8 @@ const TYPE_STYLES: Record<string, { color: string; icon: React.ReactNode; bg: st
   info: { color: "text-blue-400", icon: <Info className="w-3 h-3" />, bg: "bg-blue-500/5 border-l-2 border-l-blue-500/30" },
 };
 
-export default function ConsolePanel({ messages, onClear, onCommand }: ConsolePanelProps) {
+export default function ConsolePanel({ messages, onClear, onCommand, ideTheme = "dark" }: ConsolePanelProps) {
+  const isDark = ideTheme === "dark";
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<string[]>([]);
@@ -64,9 +66,9 @@ export default function ConsolePanel({ messages, onClear, onCommand }: ConsolePa
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0E14] font-mono text-xs">
+    <div className={`flex flex-col h-full font-mono text-xs ${isDark ? "bg-[#0A0E14]" : "bg-[#FAFBFC]"}`}>
       {/* Console header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1E2433] bg-[#0D1117] flex-shrink-0">
+      <div className={`flex items-center justify-between px-3 py-1.5 border-b flex-shrink-0 ${isDark ? "border-[#1E2433] bg-[#0D1117]" : "border-[#D0D7DE] bg-[#F6F8FA]"}`}>
         <div className="flex items-center gap-2">
           <TermIcon className="w-3.5 h-3.5 text-[#007BFF]" />
           <span className="text-[10px] font-semibold text-[#4A5568] uppercase tracking-[0.12em]">Terminal</span>
@@ -113,14 +115,14 @@ export default function ConsolePanel({ messages, onClear, onCommand }: ConsolePa
       </div>
 
       {/* Command input */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-t border-[#1E2433] bg-[#0D1117] flex-shrink-0">
+      <div className={`flex items-center gap-1 px-2 py-1.5 border-t flex-shrink-0 ${isDark ? "border-[#1E2433] bg-[#0D1117]" : "border-[#D0D7DE] bg-[#F6F8FA]"}`}>
         <ChevronRight className="w-3 h-3 text-[#007BFF] flex-shrink-0" />
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Tapez une commande..."
-          className="flex-1 bg-transparent text-[#E2E8F0] placeholder:text-[#3D4450] outline-none text-[11px] font-mono"
+          className={`flex-1 bg-transparent outline-none text-[11px] font-mono ${isDark ? "text-[#E2E8F0] placeholder:text-[#3D4450]" : "text-[#24292F] placeholder:text-[#8C959F]"}`}
         />
       </div>
     </div>

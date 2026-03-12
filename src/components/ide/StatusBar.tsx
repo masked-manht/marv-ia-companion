@@ -7,6 +7,7 @@ interface StatusBarProps {
   lineCount: number;
   isAutoSave: boolean;
   lastSaved?: string;
+  ideTheme?: "dark" | "light";
 }
 
 const LANG_LABELS: Record<string, string> = {

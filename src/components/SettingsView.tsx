@@ -31,7 +31,7 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
 };
 
 export default function SettingsView({ onBack, credits, onConversationsChanged }: SettingsViewProps) {
-  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode, ideAutoSave, setIdeAutoSave } = useSettings();
+  const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode, ideAutoSave, setIdeAutoSave, ideTheme, setIdeTheme } = useSettings();
   const { user, signOut } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
   const { updateAvailable, checking, checkForUpdate, applyUpdate } = useServiceWorker();
@@ -216,6 +216,18 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           {ideMode && (
             <Row label="Sauvegarde automatique">
               <Switch checked={ideAutoSave} onCheckedChange={setIdeAutoSave} />
+            </Row>
+          )}
+          {ideMode && (
+            <Row label="Thème IDE">
+              <div className="flex gap-1.5">
+                {(["dark", "light"] as const).map(t => (
+                  <button key={t} onClick={() => setIdeTheme(t)} className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${ideTheme === t ? "bg-primary text-primary-foreground neon-glow" : "bg-muted text-muted-foreground"}`}>
+                    {t === "dark" ? <Moon className="w-3.5 h-3.5 inline mr-1" /> : <Sun className="w-3.5 h-3.5 inline mr-1" />}
+                    {t === "dark" ? "Sombre" : "Clair"}
+                  </button>
+                ))}
+              </div>
             </Row>
           )}
           <div className="px-4 py-2 text-xs text-muted-foreground">
@@ -501,6 +513,15 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           <Row label="Version" value="v1.1.0" />
           <Row label="Développeur" value="Marvens Zamy" />
           <Row label="Moteur" value="Marv-IA Omni-Protocol v2" />
+          <Row label="📧 Support" onClick={() => window.open("mailto:ifaqideas@gmail.com")}>
+            <span className="text-xs text-primary">ifaqideas@gmail.com</span>
+          </Row>
+          <Row label="📜 Mentions légales" onClick={() => window.location.href = "/legal"}>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Row>
+          <Row label="🔒 Politique de confidentialité" onClick={() => window.location.href = "/privacy"}>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Row>
         </Section>
       </div>
     </div>

@@ -15,6 +15,8 @@ const ACCENT_COLORS: Record<AccentColor, { primary: string; ring: string; accent
   cyan:   { primary: "187 85% 53%",  ring: "187 85% 53%",  accent: "187 85% 53%" },
 };
 
+type IDETheme = "dark" | "light";
+
 type SettingsContextType = {
   theme: Theme;
   setTheme: (t: Theme) => void;
@@ -32,6 +34,8 @@ type SettingsContextType = {
   setIdeMode: (v: boolean) => void;
   ideAutoSave: boolean;
   setIdeAutoSave: (v: boolean) => void;
+  ideTheme: IDETheme;
+  setIdeTheme: (t: IDETheme) => void;
 };
 
 const SettingsContext = createContext<SettingsContextType>({} as SettingsContextType);
@@ -50,6 +54,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [accentColor, setAccentColorState] = useState<AccentColor>(() => (localStorage.getItem("marvia-accent") as AccentColor) || "green");
   const [ideMode, setIdeModeState] = useState(() => localStorage.getItem("marvia-ide") === "true");
   const [ideAutoSave, setIdeAutoSaveState] = useState(() => localStorage.getItem("marvia-ide-autosave") !== "false");
+  const [ideTheme, setIdeThemeState] = useState<IDETheme>(() => (localStorage.getItem("marvia-ide-theme") as IDETheme) || "dark");
 
   const setTheme = (t: Theme) => { setThemeState(t); localStorage.setItem("marvia-theme", t); };
   const setResponseStyle = (s: ResponseStyle) => { setResponseStyleState(s); localStorage.setItem("marvia-style", s); };
@@ -59,6 +64,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setAccentColor = (c: AccentColor) => { setAccentColorState(c); localStorage.setItem("marvia-accent", c); };
   const setIdeMode = (v: boolean) => { setIdeModeState(v); localStorage.setItem("marvia-ide", String(v)); };
   const setIdeAutoSave = (v: boolean) => { setIdeAutoSaveState(v); localStorage.setItem("marvia-ide-autosave", String(v)); };
+  const setIdeTheme = (t: IDETheme) => { setIdeThemeState(t); localStorage.setItem("marvia-ide-theme", t); };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -90,7 +96,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [accentColor]);
 
   return (
-    <SettingsContext.Provider value={{ theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode, ideAutoSave, setIdeAutoSave }}>
+    <SettingsContext.Provider value={{ theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode, ideAutoSave, setIdeAutoSave, ideTheme, setIdeTheme }}>
       {children}
     </SettingsContext.Provider>
   );

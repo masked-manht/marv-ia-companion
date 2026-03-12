@@ -501,6 +501,15 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           <Row label="Version" value="v1.1.0" />
           <Row label="Développeur" value="Marvens Zamy" />
           <Row label="Moteur" value="Marv-IA Omni-Protocol v2" />
+          <Row label="📧 Support" onClick={() => window.open("mailto:ifaqideas@gmail.com")}>
+            <span className="text-xs text-primary">ifaqideas@gmail.com</span>
+          </Row>
+          <Row label="📜 Mentions légales" onClick={() => window.location.href = "/legal"}>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Row>
+          <Row label="🔒 Politique de confidentialité" onClick={() => window.location.href = "/privacy"}>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </Row>
         </Section>
       </div>
     </div>

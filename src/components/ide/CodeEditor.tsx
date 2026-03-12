@@ -6,15 +6,16 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   language: string;
   theme?: string;
+  ideTheme?: "dark" | "light";
 }
 
-export default function CodeEditor({ value, onChange, language, theme = "marvia-dark" }: CodeEditorProps) {
+export default function CodeEditor({ value, onChange, language, ideTheme = "dark" }: CodeEditorProps) {
   const editorRef = useRef<any>(null);
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
 
-    // Define custom Marvia dark theme
+    // Dark theme
     monaco.editor.defineTheme("marvia-dark", {
       base: "vs-dark",
       inherit: true,
@@ -50,9 +51,42 @@ export default function CodeEditor({ value, onChange, language, theme = "marvia-
       },
     });
 
-    monaco.editor.setTheme("marvia-dark");
+    // Light theme
+    monaco.editor.defineTheme("marvia-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "6A737D", fontStyle: "italic" },
+        { token: "keyword", foreground: "0550AE" },
+        { token: "string", foreground: "0A7D26" },
+        { token: "number", foreground: "CF6A00" },
+        { token: "type", foreground: "6F42C1" },
+        { token: "function", foreground: "0550AE" },
+        { token: "variable", foreground: "24292F" },
+        { token: "tag", foreground: "CF222E" },
+        { token: "attribute.name", foreground: "0550AE" },
+        { token: "attribute.value", foreground: "0A7D26" },
+      ],
+      colors: {
+        "editor.background": "#FFFFFF",
+        "editor.foreground": "#24292F",
+        "editor.lineHighlightBackground": "#F6F8FA",
+        "editor.selectionBackground": "#0969DA33",
+        "editorCursor.foreground": "#0969DA",
+        "editorLineNumber.foreground": "#8C959F",
+        "editorLineNumber.activeForeground": "#0969DA",
+        "editorIndentGuide.background": "#D8DEE4",
+        "editorWidget.background": "#F6F8FA",
+        "editorWidget.border": "#D0D7DE",
+        "editorSuggestWidget.background": "#FFFFFF",
+        "editorSuggestWidget.border": "#D0D7DE",
+        "editorSuggestWidget.selectedBackground": "#0969DA22",
+      },
+    });
 
-    // Editor settings
+    const themeName = ideTheme === "light" ? "marvia-light" : "marvia-dark";
+    monaco.editor.setTheme(themeName);
+
     editor.updateOptions({
       fontSize: 14,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
@@ -78,6 +112,9 @@ export default function CodeEditor({ value, onChange, language, theme = "marvia-
     onChange(val || "");
   }, [onChange]);
 
+  const themeName = ideTheme === "light" ? "marvia-light" : "marvia-dark";
+  const bgColor = ideTheme === "light" ? "#FFFFFF" : "#0A0E14";
+
   return (
     <div className="h-full w-full overflow-hidden">
       <Editor
@@ -86,12 +123,12 @@ export default function CodeEditor({ value, onChange, language, theme = "marvia-
         value={value}
         onChange={handleChange}
         onMount={handleMount}
-        theme="marvia-dark"
+        theme={themeName}
         loading={
-          <div className="flex items-center justify-center h-full bg-[#0A0E14]">
+          <div className="flex items-center justify-center h-full" style={{ background: bgColor }}>
             <div className="flex flex-col items-center gap-2">
               <div className="w-6 h-6 border-2 border-[#007BFF] border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs text-[#4A5568]">Chargement de l'éditeur...</span>
+              <span className="text-xs" style={{ color: ideTheme === "light" ? "#8C959F" : "#4A5568" }}>Chargement...</span>
             </div>
           </div>
         }

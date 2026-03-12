@@ -11,6 +11,7 @@ interface ConsolePanelProps {
   messages: ConsoleMessage[];
   onClear: () => void;
   onCommand?: (cmd: string) => void;
+  ideTheme?: "dark" | "light";
 }
 
 const TYPE_STYLES: Record<string, { color: string; icon: React.ReactNode; bg: string }> = {

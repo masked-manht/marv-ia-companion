@@ -683,7 +683,7 @@ ${codeContext}`
           {/* Bottom Panel (Terminal) */}
           {bottomPanel !== "none" && (
             <div className="border-t border-[#1E2433]" style={{ height: `${bottomPanelHeight}%` }}>
-              <ConsolePanel messages={consoleMessages} onClear={() => setConsoleMessages([])} onCommand={handleTerminalCommand} />
+              <ConsolePanel messages={consoleMessages} onClear={() => setConsoleMessages([])} onCommand={handleTerminalCommand} ideTheme={ideTheme} />
             </div>
           )}
         </div>

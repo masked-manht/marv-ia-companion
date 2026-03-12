@@ -325,6 +325,18 @@ export default function ChatView({ conversationId, onConversationCreated, credit
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
                   )}
+                  <button
+                    onClick={async () => {
+                      if (!user) return;
+                      const { error } = await reportContent(user.id, msg.content, "inappropriate", conversationId || undefined);
+                      if (error) toast.error("Erreur lors du signalement");
+                      else toast.success("⚠️ Contenu signalé. Merci !", { duration: 3000 });
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                    title="Signaler ce contenu"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
             </div>

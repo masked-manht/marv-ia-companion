@@ -303,3 +303,14 @@ export async function clearAllMemories(userId: string) {
     body: JSON.stringify({ action: "clear", user_id: userId }),
   });
 }
+
+// --- Content Report ---
+export async function reportContent(userId: string, messageContent: string, reason: string, conversationId?: string) {
+  const { error } = await supabase.from("content_reports").insert({
+    user_id: userId,
+    message_content: messageContent.slice(0, 2000),
+    reason,
+    conversation_id: conversationId || null,
+  });
+  return { error };
+}

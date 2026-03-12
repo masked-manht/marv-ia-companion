@@ -21,7 +21,8 @@ const TYPE_STYLES: Record<string, { color: string; icon: React.ReactNode; bg: st
   info: { color: "text-blue-400", icon: <Info className="w-3 h-3" />, bg: "bg-blue-500/5 border-l-2 border-l-blue-500/30" },
 };
 
-export default function ConsolePanel({ messages, onClear, onCommand }: ConsolePanelProps) {
+export default function ConsolePanel({ messages, onClear, onCommand, ideTheme = "dark" }: ConsolePanelProps) {
+  const isDark = ideTheme === "dark";
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<string[]>([]);

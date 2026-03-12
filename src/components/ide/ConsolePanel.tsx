@@ -66,7 +66,7 @@ export default function ConsolePanel({ messages, onClear, onCommand, ideTheme = 
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0E14] font-mono text-xs">
+    <div className={`flex flex-col h-full font-mono text-xs ${isDark ? "bg-[#0A0E14]" : "bg-[#FAFBFC]"}`}>
       {/* Console header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1E2433] bg-[#0D1117] flex-shrink-0">
         <div className="flex items-center gap-2">

@@ -218,6 +218,18 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
               <Switch checked={ideAutoSave} onCheckedChange={setIdeAutoSave} />
             </Row>
           )}
+          {ideMode && (
+            <Row label="Thème IDE">
+              <div className="flex gap-1.5">
+                {(["dark", "light"] as const).map(t => (
+                  <button key={t} onClick={() => setIdeTheme(t)} className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${ideTheme === t ? "bg-primary text-primary-foreground neon-glow" : "bg-muted text-muted-foreground"}`}>
+                    {t === "dark" ? <Moon className="w-3.5 h-3.5 inline mr-1" /> : <Sun className="w-3.5 h-3.5 inline mr-1" />}
+                    {t === "dark" ? "Sombre" : "Clair"}
+                  </button>
+                ))}
+              </div>
+            </Row>
+          )}
           <div className="px-4 py-2 text-xs text-muted-foreground">
             <p>Éditeur de code intégré avec prévisualisation en direct, console et assistant IA.</p>
             {ideMode && <p className="mt-1">La sauvegarde auto enregistre vos fichiers en local toutes les 5 secondes.</p>}

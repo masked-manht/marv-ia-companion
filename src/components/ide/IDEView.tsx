@@ -149,69 +149,148 @@ export default function IDEView({ onBack }: IDEViewProps) {
 
   const handleTerminalCommand = useCallback((cmd: string) => {
     const now = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    setConsoleMessages(prev => [...prev, { type: "info", text: `$ ${cmd}`, time: now }]);
+    const addMsg = (type: "log" | "error" | "info" | "warn", text: string) => {
+      setConsoleMessages(prev => [...prev, { type, text, time: now }]);
+    };
+    addMsg("info", `$ ${cmd}`);
 
-    // Simulate common commands
     const lower = cmd.toLowerCase().trim();
-    if (lower === "clear" || lower === "cls") {
-      setConsoleMessages([]);
-      return;
-    }
-    if (lower === "help") {
-      const helpLines = [
-        "Commandes disponibles :",
-        "  clear/cls     - Effacer le terminal",
-        "  ls/dir        - Lister les fichiers",
-        "  cat <fichier> - Afficher le contenu",
-        "  run           - Exécuter le Python",
-        "  export        - Exporter le projet",
-        "  date          - Date et heure",
-        "  echo <text>   - Afficher du texte",
-        "  version       - Version de l'IDE",
-      ];
-      helpLines.forEach(l => setConsoleMessages(prev => [...prev, { type: "log", text: l, time: now }]));
-      return;
-    }
-    if (lower === "ls" || lower === "dir") {
-      files.forEach(f => setConsoleMessages(prev => [...prev, { type: "log", text: `  📄 ${f.name}`, time: now }]));
-      return;
-    }
-    if (lower.startsWith("cat ")) {
-      const fname = cmd.slice(4).trim();
-      const file = files.find(f => f.name === fname);
-      if (file) {
-        setConsoleMessages(prev => [...prev, { type: "log", text: file.content, time: now }]);
-      } else {
-        setConsoleMessages(prev => [...prev, { type: "error", text: `Fichier '${fname}' introuvable`, time: now }]);
+    const parts = lower.split(/\s+/);
+    const command = parts[0];
+
+    switch (command) {
+      case "clear": case "cls":
+        setConsoleMessages([]);
+        return;
+      case "help":
+        ["Commandes disponibles :",
+         "  clear/cls       — Effacer le terminal",
+         "  ls/dir          — Lister les fichiers",
+         "  cat <fichier>   — Afficher le contenu",
+         "  touch <nom>     — Créer un fichier",
+         "  rm <fichier>    — Supprimer un fichier",
+         "  run / python    — Exécuter le Python",
+         "  node <fichier>  — Exécuter du JS",
+         "  export          — Exporter le projet",
+         "  date            — Date et heure",
+         "  echo <text>     — Afficher du texte",
+         "  whoami          — Utilisateur",
+         "  pwd             — Répertoire courant",
+         "  uptime          — Temps de session",
+         "  wc <fichier>    — Compter les lignes",
+         "  grep <mot>      — Chercher dans les fichiers",
+         "  version         — Version de l'IDE",
+        ].forEach(l => addMsg("log", l));
+        return;
+      case "ls": case "dir":
+        addMsg("log", `total ${files.length}`);
+        files.forEach(f => {
+          const size = new Blob([f.content]).size;
+          addMsg("log", `  -rw-r--r--  ${String(size).padStart(6)} B  📄 ${f.name}`);
+        });
+        return;
+      case "cat": {
+        const fname = cmd.slice(4).trim();
+        const file = files.find(f => f.name === fname);
+        if (file) addMsg("log", file.content);
+        else addMsg("error", `cat: ${fname}: Fichier introuvable`);
+        return;
       }
-      return;
+      case "touch": {
+        const newName = cmd.slice(6).trim();
+        if (!newName) { addMsg("error", "touch: nom de fichier requis"); return; }
+        const ext = newName.split(".").pop() || "js";
+        const langMap: Record<string, string> = { html: "html", css: "css", js: "javascript", ts: "typescript", py: "python" };
+        const id = crypto.randomUUID();
+        setFiles(prev => [...prev, { id, name: newName, language: langMap[ext] || "javascript", content: `// ${newName}\n` }]);
+        addMsg("log", `Fichier créé: ${newName}`);
+        return;
+      }
+      case "rm": {
+        const rmName = cmd.slice(3).trim();
+        const rmFile = files.find(f => f.name === rmName);
+        if (!rmFile) { addMsg("error", `rm: ${rmName}: Fichier introuvable`); return; }
+        if (files.length <= 1) { addMsg("error", "rm: impossible de supprimer le dernier fichier"); return; }
+        handleCloseFile(rmFile.id);
+        setFiles(prev => prev.filter(f => f.name !== rmName));
+        addMsg("log", `Supprimé: ${rmName}`);
+        return;
+      }
+      case "run": case "python":
+        handleRunPython();
+        return;
+      case "node": {
+        const nodeFname = cmd.slice(5).trim();
+        const nodeFile = files.find(f => f.name === nodeFname);
+        if (!nodeFile) { addMsg("error", `node: ${nodeFname}: Fichier introuvable`); return; }
+        try {
+          const result = new Function(nodeFile.content)();
+          if (result !== undefined) addMsg("log", String(result));
+          addMsg("info", `✓ ${nodeFname} exécuté`);
+        } catch (e: any) {
+          addMsg("error", e.message);
+        }
+        return;
+      }
+      case "export":
+        handleExport();
+        return;
+      case "date":
+        addMsg("log", new Date().toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "medium" }));
+        return;
+      case "whoami":
+        addMsg("log", "developer@marvia-ide");
+        return;
+      case "pwd":
+        addMsg("log", "/home/developer/marvia-project");
+        return;
+      case "uptime": {
+        const mins = Math.floor(performance.now() / 60000);
+        addMsg("log", `Session active depuis ${mins} minute${mins > 1 ? "s" : ""}`);
+        return;
+      }
+      case "wc": {
+        const wcName = cmd.slice(3).trim();
+        const wcFile = files.find(f => f.name === wcName);
+        if (!wcFile) { addMsg("error", `wc: ${wcName}: Fichier introuvable`); return; }
+        const lines = wcFile.content.split("\n").length;
+        const words = wcFile.content.split(/\s+/).filter(Boolean).length;
+        const chars = wcFile.content.length;
+        addMsg("log", `  ${lines} lignes  ${words} mots  ${chars} caractères  ${wcName}`);
+        return;
+      }
+      case "grep": {
+        const searchTerm = parts[1];
+        if (!searchTerm) { addMsg("error", "grep: terme de recherche requis"); return; }
+        let found = false;
+        files.forEach(f => {
+          f.content.split("\n").forEach((line, i) => {
+            if (line.toLowerCase().includes(searchTerm)) {
+              addMsg("log", `${f.name}:${i + 1}: ${line.trim()}`);
+              found = true;
+            }
+          });
+        });
+        if (!found) addMsg("warn", `Aucun résultat pour '${searchTerm}'`);
+        return;
+      }
+      case "version":
+        addMsg("info", "Marv-IA IDE v3.0 — Terminal Intégré Pro");
+        return;
+      default:
+        break;
     }
-    if (lower === "run" || lower === "python main.py") {
-      handleRunPython();
-      return;
-    }
-    if (lower === "export") {
-      handleExport();
-      return;
-    }
-    if (lower === "date") {
-      setConsoleMessages(prev => [...prev, { type: "log", text: new Date().toLocaleString("fr-FR"), time: now }]);
-      return;
-    }
+    // Echo
     if (lower.startsWith("echo ")) {
-      setConsoleMessages(prev => [...prev, { type: "log", text: cmd.slice(5), time: now }]);
-      return;
-    }
-    if (lower === "version") {
-      setConsoleMessages(prev => [...prev, { type: "info", text: "Marv-IA IDE v3.0 — Terminal Intégré", time: now }]);
+      addMsg("log", cmd.slice(5));
       return;
     }
     // Try JS eval
     try {
       const result = new Function(`return (${cmd})`)();
-      setConsoleMessages(prev => [...prev, { type: "log", text: String(result), time: now }]);
+      addMsg("log", String(result));
     } catch {
-      setConsoleMessages(prev => [...prev, { type: "error", text: `Commande inconnue: ${cmd}. Tapez 'help' pour l'aide.`, time: now }]);
+      addMsg("error", `bash: ${parts[0]}: commande introuvable. Tapez 'help'.`);
     }
   }, [files, handleRunPython]);
 

@@ -15,6 +15,8 @@ const ACCENT_COLORS: Record<AccentColor, { primary: string; ring: string; accent
   cyan:   { primary: "187 85% 53%",  ring: "187 85% 53%",  accent: "187 85% 53%" },
 };
 
+type IDETheme = "dark" | "light";
+
 type SettingsContextType = {
   theme: Theme;
   setTheme: (t: Theme) => void;
@@ -32,6 +34,8 @@ type SettingsContextType = {
   setIdeMode: (v: boolean) => void;
   ideAutoSave: boolean;
   setIdeAutoSave: (v: boolean) => void;
+  ideTheme: IDETheme;
+  setIdeTheme: (t: IDETheme) => void;
 };
 
 const SettingsContext = createContext<SettingsContextType>({} as SettingsContextType);

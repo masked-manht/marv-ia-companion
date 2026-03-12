@@ -635,7 +635,7 @@ ${codeContext}`
         {/* Mobile content */}
         <div className="flex-1 overflow-hidden">
           {mobileTab === "editor" && (
-            <CodeEditor value={activeFile.content} onChange={updateFileContent} language={activeFile.language} />
+            <CodeEditor value={activeFile.content} onChange={updateFileContent} language={activeFile.language} ideTheme={ideTheme} />
           )}
           {mobileTab === "preview" && (
             <div className="h-full flex flex-col">

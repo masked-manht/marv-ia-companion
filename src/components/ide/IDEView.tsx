@@ -576,7 +576,7 @@ ${codeContext}`
           <div className="flex-1 flex overflow-hidden" style={{ height: bottomPanel !== "none" ? `${100 - bottomPanelHeight}%` : "100%" }}>
             {/* Code Editor */}
             <div className={`overflow-hidden ${showPreviewSplit ? "flex-1" : "w-full"}`}>
-              <CodeEditor value={activeFile.content} onChange={updateFileContent} language={activeFile.language} />
+              <CodeEditor value={activeFile.content} onChange={updateFileContent} language={activeFile.language} ideTheme={ideTheme} />
             </div>
 
             {/* Preview Panel */}

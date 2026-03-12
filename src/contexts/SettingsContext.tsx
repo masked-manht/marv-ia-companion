@@ -64,6 +64,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setAccentColor = (c: AccentColor) => { setAccentColorState(c); localStorage.setItem("marvia-accent", c); };
   const setIdeMode = (v: boolean) => { setIdeModeState(v); localStorage.setItem("marvia-ide", String(v)); };
   const setIdeAutoSave = (v: boolean) => { setIdeAutoSaveState(v); localStorage.setItem("marvia-ide-autosave", String(v)); };
+  const setIdeTheme = (t: IDETheme) => { setIdeThemeState(t); localStorage.setItem("marvia-ide-theme", t); };
 
   useEffect(() => {
     const root = document.documentElement;

@@ -39,8 +39,8 @@ interface IDEViewProps {
 }
 
 export default function IDEView({ onBack }: IDEViewProps) {
-  const { setIdeAutoSave: _, ...settingsRest } = useSettings();
-  const isDark = settingsRest.ideTheme === "dark";
+  const { aiModel, responseStyle, ideAutoSave, ideTheme } = useSettings();
+  const isDark = ideTheme === "dark";
   const { startListening } = useVoice();
 
   const [files, setFiles] = useState<FileTab[]>(() => {

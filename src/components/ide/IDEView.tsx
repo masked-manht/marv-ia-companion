@@ -39,7 +39,7 @@ interface IDEViewProps {
 }
 
 export default function IDEView({ onBack }: IDEViewProps) {
-  const { aiModel, responseStyle, ideAutoSave } = useSettings();
+  const { aiModel, responseStyle, ideAutoSave, ideTheme } = useSettings();
   const { startListening } = useVoice();
 
   const [files, setFiles] = useState<FileTab[]>(() => {

@@ -786,6 +786,7 @@ ${codeContext}`
         lineCount={activeFile.content.split("\n").length}
         isAutoSave={ideAutoSave}
         lastSaved={lastSaved}
+        ideTheme={ideTheme}
       />
     </div>
   );

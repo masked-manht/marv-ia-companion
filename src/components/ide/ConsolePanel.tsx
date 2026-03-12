@@ -115,14 +115,14 @@ export default function ConsolePanel({ messages, onClear, onCommand, ideTheme = 
       </div>
 
       {/* Command input */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-t border-[#1E2433] bg-[#0D1117] flex-shrink-0">
+      <div className={`flex items-center gap-1 px-2 py-1.5 border-t flex-shrink-0 ${isDark ? "border-[#1E2433] bg-[#0D1117]" : "border-[#D0D7DE] bg-[#F6F8FA]"}`}>
         <ChevronRight className="w-3 h-3 text-[#007BFF] flex-shrink-0" />
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Tapez une commande..."
-          className="flex-1 bg-transparent text-[#E2E8F0] placeholder:text-[#3D4450] outline-none text-[11px] font-mono"
+          className={`flex-1 bg-transparent outline-none text-[11px] font-mono ${isDark ? "text-[#E2E8F0] placeholder:text-[#3D4450]" : "text-[#24292F] placeholder:text-[#8C959F]"}`}
         />
       </div>
     </div>

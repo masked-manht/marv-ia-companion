@@ -733,7 +733,7 @@ ${codeContext}`
             </div>
           )}
           {mobileTab === "terminal" && (
-            <ConsolePanel messages={consoleMessages} onClear={() => setConsoleMessages([])} onCommand={handleTerminalCommand} />
+            <ConsolePanel messages={consoleMessages} onClear={() => setConsoleMessages([])} onCommand={handleTerminalCommand} ideTheme={ideTheme} />
           )}
           {mobileTab === "ai" && renderAIPanel()}
         </div>

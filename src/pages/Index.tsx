@@ -24,7 +24,7 @@ const IDEView = lazy(() => import("@/components/ide/IDEView"));
 type View = "chat" | "pro" | "settings" | "ide";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, profileComplete, checkProfile } = useAuth();
   const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
   const { isSpeaking, stopSpeaking } = useVoice();
   const { ideMode } = useSettings();

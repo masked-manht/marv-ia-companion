@@ -83,6 +83,10 @@ const Index = () => {
 
   if (!user) return <AuthPage />;
 
+  if (!profileComplete) {
+    return <ProfileCompletion userId={user.id} onComplete={() => checkProfile()} />;
+  }
+
   if (showPermissions) {
     return <PermissionsRequest onComplete={() => setShowPermissions(false)} />;
   }

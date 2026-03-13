@@ -10,8 +10,6 @@ import ProfileCompletion from "@/components/ProfileCompletion";
 import SplashScreen from "@/components/SplashScreen";
 import VoiceIndicator from "@/components/VoiceIndicator";
 import PermissionsRequest from "@/components/PermissionsRequest";
-import VoiceIndicator from "@/components/VoiceIndicator";
-import PermissionsRequest from "@/components/PermissionsRequest";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import { useVoice } from "@/hooks/useVoice";

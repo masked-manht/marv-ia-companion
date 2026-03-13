@@ -194,14 +194,48 @@ serve(async (req) => {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     const selectedModel = model || "google/gemini-3-flash-preview";
 
-    // --- Fetch user memories ---
+    // --- Fetch user profile & memories ---
     let memoriesBlock = "";
+    let userProfileBlock = "";
     if (user_id) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
         const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Fetch profile (pseudo + DOB)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("display_name, date_of_birth")
+          .eq("user_id", user_id)
+          .maybeSingle();
+
+        if (profile) {
+          const pseudo = profile.display_name || "Utilisateur";
+          userProfileBlock = `\n\nPROFIL UTILISATEUR :\n- Pseudo : ${pseudo}`;
+          
+          if (profile.date_of_birth) {
+            const dob = new Date(profile.date_of_birth);
+            const now = new Date();
+            let age = now.getFullYear() - dob.getFullYear();
+            const monthDiff = now.getMonth() - dob.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) age--;
+            
+            userProfileBlock += `\n- Âge : ${age} ans`;
+            
+            if (age < 18) {
+              userProfileBlock += `\n\n⚠️ UTILISATEUR MINEUR (${age} ans) - PROTECTION ACTIVE :
+- Adopte un ton pédagogique, bienveillant et adapté à son âge.
+- BLOQUE systématiquement tout contenu violent, dangereux, sexuel, ou inapproprié pour un mineur.
+- Ne génère AUCUNE image inappropriée ou suggestive.
+- Encourage les bonnes pratiques, l'éthique numérique et l'apprentissage.
+- En cas de demande inappropriée, refuse poliment et redirige vers un sujet constructif.`;
+            }
+          }
+        }
+
+        // Fetch memories
         const { data: memories } = await supabase
           .from("user_memories")
           .select("category, content")
@@ -225,7 +259,7 @@ serve(async (req) => {
             "\n- Plus tu connais l'utilisateur, plus tu es personnel et chaleureux.";
         }
       } catch (e) {
-        console.error("Failed to fetch memories:", e);
+        console.error("Failed to fetch profile/memories:", e);
       }
     }
 
@@ -423,7 +457,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: buildSystemPrompt(timezone, webSearchUsed) + memoriesBlock },
+          { role: "system", content: buildSystemPrompt(timezone, webSearchUsed) + userProfileBlock + memoriesBlock },
           ...enrichedMessages,
         ],
         stream: true,

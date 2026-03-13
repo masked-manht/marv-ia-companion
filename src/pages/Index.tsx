@@ -6,6 +6,7 @@ import SidebarDrawer from "@/components/SidebarDrawer";
 import SettingsView from "@/components/SettingsView";
 import CreditsDisplay from "@/components/CreditsDisplay";
 import AuthPage from "@/components/AuthPage";
+import ProfileCompletion from "@/components/ProfileCompletion";
 import SplashScreen from "@/components/SplashScreen";
 import VoiceIndicator from "@/components/VoiceIndicator";
 import PermissionsRequest from "@/components/PermissionsRequest";
@@ -21,7 +22,7 @@ const IDEView = lazy(() => import("@/components/ide/IDEView"));
 type View = "chat" | "pro" | "settings" | "ide";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, profileComplete, checkProfile } = useAuth();
   const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
   const { isSpeaking, stopSpeaking } = useVoice();
   const { ideMode } = useSettings();
@@ -81,6 +82,10 @@ const Index = () => {
   }
 
   if (!user) return <AuthPage />;
+
+  if (!profileComplete) {
+    return <ProfileCompletion userId={user.id} onComplete={() => checkProfile()} />;
+  }
 
   if (showPermissions) {
     return <PermissionsRequest onComplete={() => setShowPermissions(false)} />;

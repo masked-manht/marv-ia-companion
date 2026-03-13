@@ -457,7 +457,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: selectedModel,
         messages: [
-          { role: "system", content: buildSystemPrompt(timezone, webSearchUsed) + memoriesBlock },
+          { role: "system", content: buildSystemPrompt(timezone, webSearchUsed) + userProfileBlock + memoriesBlock },
           ...enrichedMessages,
         ],
         stream: true,

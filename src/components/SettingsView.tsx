@@ -57,6 +57,8 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
   const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
+  const [ownerStats, setOwnerStats] = useState({ userCount: 0, messageCount: 0, reports: [] as any[] });
+
   // Owner monitoring polling
   useEffect(() => {
     if (!isOwner) return;
@@ -65,6 +67,26 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
       if (data) setMonitorData({ promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 });
     }, 1000);
     return () => clearInterval(interval);
+  }, [isOwner]);
+
+  // Owner: Load admin stats
+  useEffect(() => {
+    if (!isOwner) return;
+    const loadStats = async () => {
+      try {
+        const [profilesRes, messagesRes, reportsRes] = await Promise.all([
+          supabase.from("profiles").select("id", { count: "exact", head: true }),
+          supabase.from("messages").select("id", { count: "exact", head: true }),
+          supabase.from("content_reports").select("*").order("created_at", { ascending: false }).limit(20),
+        ]);
+        setOwnerStats({
+          userCount: profilesRes.count || 0,
+          messageCount: messagesRes.count || 0,
+          reports: reportsRes.data || [],
+        });
+      } catch { /* ignore */ }
+    };
+    loadStats();
   }, [isOwner]);
 
   const loadTrash = useCallback(async () => {

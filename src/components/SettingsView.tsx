@@ -198,24 +198,58 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
         {isOwner && (
           <Section icon={<Activity className="w-4 h-4" />} title={
             <span className="flex items-center gap-2">
-              Monitorage & Tokens
+              Dashboard Owner
               <span className="text-[9px] font-bold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">OWNER</span>
             </span>
           }>
+            {/* User Stats */}
+            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Utilisateurs actifs</span>}>
+              <span className="text-xs font-mono text-primary font-bold">{ownerStats.userCount}</span>
+            </Row>
+            <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Total messages</span>}>
+              <span className="text-xs font-mono text-primary">{ownerStats.messageCount.toLocaleString()}</span>
+            </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Prompt Tokens (estimé)</span>}>
               <span className="text-xs font-mono text-primary">{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Response Tokens (estimé)</span>}>
               <span className="text-xs font-mono text-primary">{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
             </Row>
-            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API (dernier appel)</span>}>
+            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API</span>}>
               <span className={`text-xs font-mono ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
                 {monitorData.latency > 0 ? `${monitorData.latency}ms` : "—"}
               </span>
             </Row>
+            {/* System Health */}
+            <Row label={<span className="flex items-center gap-2"><HeartPulse className="w-3.5 h-3.5 text-muted-foreground" />État système</span>}>
+              <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                Opérationnel
+              </span>
+            </Row>
             <Row label="Version système" value="v2.0.0" />
-            <div className="px-4 py-2 text-[10px] text-muted-foreground">
-              Données de monitoring en temps réel. Les tokens sont estimés (~4 caractères = 1 token).
+          </Section>
+        )}
+
+        {/* Owner Moderation */}
+        {isOwner && ownerStats.reports.length > 0 && (
+          <Section icon={<MessageSquareWarning className="w-4 h-4" />} title={
+            <span className="flex items-center gap-2">
+              Modération
+              <span className="text-[9px] font-bold bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full">{ownerStats.reports.length}</span>
+            </span>
+          }>
+            <div className="max-h-64 overflow-y-auto scrollbar-hide divide-y divide-border">
+              {ownerStats.reports.map((report: any) => (
+                <div key={report.id} className="px-4 py-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-destructive font-medium uppercase">⚠ {report.reason}</span>
+                    <span className="text-[9px] text-muted-foreground">{formatDate(report.created_at)}</span>
+                  </div>
+                  <p className="text-xs text-foreground line-clamp-3">{report.message_content}</p>
+                  <p className="text-[9px] text-muted-foreground font-mono">User: {report.user_id.slice(0, 8)}...</p>
+                </div>
+              ))}
             </div>
           </Section>
         )}

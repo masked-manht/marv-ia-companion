@@ -6,6 +6,7 @@ import {
   FolderOpen, X, Plus, Maximize2, Minimize2, Globe, Zap
 } from "lucide-react";
 import CodeEditor from "./CodeEditor";
+import SymbolBar from "./SymbolBar";
 import LivePreview from "./LivePreview";
 import ConsolePanel, { type ConsoleMessage } from "./ConsolePanel";
 import FileTabs, { type FileTab } from "./FileTabs";

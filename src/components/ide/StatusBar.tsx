@@ -1,5 +1,5 @@
 import React from "react";
-import { GitBranch, AlertCircle, CheckCircle2 } from "lucide-react";
+import { GitBranch, AlertCircle, CheckCircle2, Cloud } from "lucide-react";
 
 interface StatusBarProps {
   language: string;
@@ -8,6 +8,7 @@ interface StatusBarProps {
   isAutoSave: boolean;
   lastSaved?: string;
   ideTheme?: "dark" | "light";
+  isSyncing?: boolean;
 }
 
 const LANG_LABELS: Record<string, string> = {
@@ -18,7 +19,7 @@ const LANG_LABELS: Record<string, string> = {
   python: "Python",
 };
 
-export default function StatusBar({ language, fileName, lineCount, isAutoSave, lastSaved }: StatusBarProps) {
+export default function StatusBar({ language, fileName, lineCount, isAutoSave, lastSaved, isSyncing }: StatusBarProps) {
   return (
     <div className="flex items-center justify-between px-3 py-[2px] bg-[#007BFF] text-white text-[10px] font-medium flex-shrink-0 select-none" style={{ minHeight: "22px" }}>
       {/* Left */}
@@ -29,8 +30,12 @@ export default function StatusBar({ language, fileName, lineCount, isAutoSave, l
         </div>
         {isAutoSave ? (
           <div className="flex items-center gap-1 opacity-80">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>{lastSaved || "Sauvegardé"}</span>
+            {isSyncing ? (
+              <Cloud className="w-3 h-3 animate-pulse" />
+            ) : (
+              <CheckCircle2 className="w-3 h-3" />
+            )}
+            <span>{isSyncing ? "Syncing..." : lastSaved || "Sauvegardé"}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1 opacity-80">

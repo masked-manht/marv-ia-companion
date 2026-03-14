@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight, Brain, X } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight, Brain, X, Search, Tag, Shield, Activity, Clock, Hash } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -30,9 +30,15 @@ const MODEL_LABELS: Record<string, { label: string; pro: boolean }> = {
   "google/gemini-2.5-pro": { label: "Gemini 2.5 Pro (Puissant)", pro: true },
 };
 
+const CAT_ICONS: Record<string, string> = {
+  identite: "👤", lieu: "📍", profession: "💼",
+  preference: "⭐", projet: "📋", relation: "👥", general: "📝",
+  style: "🎭", humeur: "💭",
+};
+
 export default function SettingsView({ onBack, credits, onConversationsChanged }: SettingsViewProps) {
   const { theme, setTheme, responseStyle, setResponseStyle, voiceEnabled, setVoiceEnabled, voiceTone, setVoiceTone, aiModel, setAiModel, accentColor, setAccentColor, ideMode, setIdeMode, ideAutoSave, setIdeAutoSave, ideTheme, setIdeTheme } = useSettings();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isOwner } = useAuth();
   const { permission, supported, requestPermission, sendLocalNotification } = useNotifications();
   const { updateAvailable, checking, checkForUpdate, applyUpdate } = useServiceWorker();
 
@@ -47,6 +53,18 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memories, setMemories] = useState<any[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [confirmClearMemory, setConfirmClearMemory] = useState(false);
+  const [memorySearch, setMemorySearch] = useState("");
+  const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
+  const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
+  // Owner monitoring polling
+  useEffect(() => {
+    if (!isOwner) return;
+    const interval = setInterval(() => {
+      const data = (window as any).__marviaMonitoring;
+      if (data) setMonitorData({ promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isOwner]);
 
   const loadTrash = useCallback(async () => {
     if (!user) return;
@@ -108,6 +126,15 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
     return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   };
 
+  // Filtered memories
+  const filteredMemories = memories.filter(m => {
+    const matchesSearch = !memorySearch || m.content?.toLowerCase().includes(memorySearch.toLowerCase());
+    const matchesFilter = !memoryFilter || m.category === memoryFilter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const uniqueCategories = [...new Set(memories.map((m: any) => m.category))];
+
   const Section: React.FC<{ icon: React.ReactNode; title: React.ReactNode; children: React.ReactNode }> = ({ icon, title, children }) => (
     <div className="mb-6">
       <div className="flex items-center gap-2.5 mb-3 px-1">
@@ -135,9 +162,41 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
         <button onClick={onBack} className="text-primary"><ArrowLeft className="w-5 h-5" /></button>
         <h2 className="text-lg font-semibold text-foreground flex-1">Paramètres</h2>
+        {isOwner && (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+            <Shield className="w-3 h-3 text-amber-400" />
+            <span className="text-[9px] font-bold text-amber-400 uppercase">Owner</span>
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-4">
+        {/* Owner Monitoring - Only rendered if isOwner */}
+        {isOwner && (
+          <Section icon={<Activity className="w-4 h-4" />} title={
+            <span className="flex items-center gap-2">
+              Monitorage & Tokens
+              <span className="text-[9px] font-bold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">OWNER</span>
+            </span>
+          }>
+            <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Prompt Tokens (estimé)</span>}>
+              <span className="text-xs font-mono text-primary">{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
+            </Row>
+            <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Response Tokens (estimé)</span>}>
+              <span className="text-xs font-mono text-primary">{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
+            </Row>
+            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API (dernier appel)</span>}>
+              <span className={`text-xs font-mono ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
+                {monitorData.latency > 0 ? `${monitorData.latency}ms` : "—"}
+              </span>
+            </Row>
+            <Row label="Version système" value={`v1.2.0`} />
+            <div className="px-4 py-2 text-[10px] text-muted-foreground">
+              Données de monitoring en temps réel. Les tokens sont estimés (~4 caractères = 1 token).
+            </div>
+          </Section>
+        )}
+
         {/* Crédits */}
         <Section icon={<Zap className="w-4 h-4" />} title="Crédits Pro">
           <Row label="Crédits restants">
@@ -285,7 +344,52 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
             </div>
           </Row>
           {memoryOpen && (
-            <div className="px-3 py-3 space-y-2 max-h-80 overflow-y-auto scrollbar-hide">
+            <div className="px-3 py-3 space-y-2 max-h-[28rem] overflow-y-auto scrollbar-hide">
+              {/* Search & Filter bar */}
+              {memories.length > 0 && (
+                <div className="space-y-2 pb-2">
+                  <div className="flex items-center gap-2 bg-muted/60 rounded-lg px-2.5 py-1.5">
+                    <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={memorySearch}
+                      onChange={e => setMemorySearch(e.target.value)}
+                      placeholder="Rechercher un souvenir..."
+                      className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
+                    />
+                    {memorySearch && (
+                      <button onClick={() => setMemorySearch("")} className="text-muted-foreground hover:text-foreground">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  {uniqueCategories.length > 1 && (
+                    <div className="flex gap-1 flex-wrap">
+                      <button
+                        onClick={() => setMemoryFilter(null)}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${!memoryFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                      >
+                        <Tag className="w-2.5 h-2.5" />
+                        Tous
+                      </button>
+                      {uniqueCategories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setMemoryFilter(memoryFilter === cat ? null : cat)}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${memoryFilter === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                        >
+                          <span>{CAT_ICONS[cat] || "📝"}</span>
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="text-[10px] text-muted-foreground">
+                    {filteredMemories.length} / {memories.length} souvenirs
+                  </div>
+                </div>
+              )}
+
               {memoryLoading && (
                 <p className="text-center text-muted-foreground text-xs py-4">Chargement...</p>
               )}
@@ -296,24 +400,21 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
                   <p className="text-[10px] text-muted-foreground mt-1">Discutez avec Marv-IA pour qu'elle apprenne à vous connaître</p>
                 </div>
               )}
-              {memories.map((mem: any) => {
-                const catIcons: Record<string, string> = {
-                  identite: "👤", lieu: "📍", profession: "💼",
-                  preference: "⭐", projet: "📋", relation: "👥", general: "📝"
-                };
-                return (
-                  <div key={mem.id} className="flex items-start gap-2 bg-muted/50 rounded-lg p-2.5 group">
-                    <span className="text-sm flex-shrink-0">{catIcons[mem.category] || "📝"}</span>
-                    <p className="text-xs text-foreground flex-1">{mem.content}</p>
-                    <button
-                      onClick={() => handleDeleteMemory(mem.id)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+              {filteredMemories.map((mem: any) => (
+                <div key={mem.id} className="flex items-start gap-2 bg-muted/50 rounded-lg p-2.5 group">
+                  <span className="text-sm flex-shrink-0">{CAT_ICONS[mem.category] || "📝"}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-foreground">{mem.content}</p>
+                    <span className="text-[9px] text-muted-foreground mt-0.5 inline-block">#{mem.category}</span>
                   </div>
-                );
-              })}
+                  <button
+                    onClick={() => handleDeleteMemory(mem.id)}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
               {memories.length > 0 && (
                 <div className="pt-2">
                   {confirmClearMemory ? (
@@ -378,7 +479,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
                   {confirmDeleteId === conv.id ? (
                     <div className="flex items-center gap-2 bg-destructive/10 rounded-lg p-2">
                       <AlertTriangle className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                      <p className="text-[10px] text-destructive flex-1">Supprimer définitivement ? (textes, images, code...)</p>
+                      <p className="text-[10px] text-destructive flex-1">Supprimer définitivement ?</p>
                       <button
                         onClick={() => handlePermanentDelete(conv.id)}
                         className="text-[10px] font-bold text-destructive-foreground bg-destructive px-2 py-0.5 rounded"
@@ -486,12 +587,10 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           </Row>
           <Row label="Effacer le cache">
             <button onClick={async () => {
-              // Clear caches without logging out
               if ('caches' in window) {
                 const keys = await caches.keys();
                 await Promise.all(keys.map(k => caches.delete(k)));
               }
-              // Clear only non-auth localStorage items
               const authKeys: string[] = [];
               for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -526,7 +625,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
 
         {/* À propos */}
         <Section icon={<Zap className="w-4 h-4" />} title="À propos">
-          <Row label="Version" value="v1.1.0" />
+          <Row label="Version" value="v1.2.0" />
           <Row label="Développeur" value="Marvens Zamy" />
           <Row label="Moteur" value="Marv-IA Omni-Protocol v2" />
         </Section>

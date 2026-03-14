@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
-import { Menu, Sparkles, Settings, Crown, Code2 } from "lucide-react";
+import { Menu, Sparkles, Settings, Crown, Code2, Shield } from "lucide-react";
 import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
@@ -22,7 +22,7 @@ const IDEView = lazy(() => import("@/components/ide/IDEView"));
 type View = "chat" | "pro" | "settings" | "ide";
 
 const Index = () => {
-  const { user, loading, profileComplete, checkProfile } = useAuth();
+  const { user, loading, profileComplete, isOwner, checkProfile } = useAuth();
   const { credits, consumeCredit, refreshCredits } = useCredits(user?.id);
   const { isSpeaking, stopSpeaking } = useVoice();
   const { ideMode } = useSettings();
@@ -33,7 +33,6 @@ const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [showPermissions, setShowPermissions] = useState(false);
 
-  // Show permissions dialog after first login
   useEffect(() => {
     if (user && !localStorage.getItem("marvia-permissions-asked")) {
       setShowPermissions(true);
@@ -128,6 +127,14 @@ const Index = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Owner badge */}
+      {isOwner && (
+        <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-b border-amber-500/30">
+          <Shield className="w-3 h-3 text-amber-400" />
+          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Owner Mode</span>
+        </div>
+      )}
+
       {/* App Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border flex-shrink-0">
         <button onClick={() => setSidebarOpen(true)} className="text-muted-foreground hover:text-foreground transition-colors">

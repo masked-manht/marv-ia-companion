@@ -78,6 +78,7 @@ export default function IDEView({ onBack }: IDEViewProps) {
 
   // Auto-save status
   const [lastSaved, setLastSaved] = useState<string>("");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const activeFile = files.find(f => f.id === activeFileId) || files[0];
   const htmlFile = files.find(f => f.language === "html");
@@ -94,9 +95,11 @@ export default function IDEView({ onBack }: IDEViewProps) {
   useEffect(() => {
     if (!ideAutoSave) return;
     const interval = setInterval(() => {
+      setIsSyncing(true);
       localStorage.setItem("marvia-ide-files", JSON.stringify(files));
       setFiles(prev => prev.map(f => ({ ...f, modified: false })));
       setLastSaved(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
+      setTimeout(() => setIsSyncing(false), 800);
     }, 5000);
     return () => clearInterval(interval);
   }, [files, ideAutoSave]);
@@ -787,6 +790,7 @@ ${codeContext}`
         isAutoSave={ideAutoSave}
         lastSaved={lastSaved}
         ideTheme={ideTheme}
+        isSyncing={isSyncing}
       />
     </div>
   );

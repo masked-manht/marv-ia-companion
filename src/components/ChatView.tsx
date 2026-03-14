@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2, Camera, MapPin, Search, Flag } from "lucide-react";
+import { Send, Mic, ImagePlus, Sparkles, Copy, Check, StopCircle, Volume2, Share2, Camera, MapPin, Search, Flag, RotateCcw, Download, FileCode } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import ImageBubble from "@/components/ImageBubble";
 import { streamChat, streamSearch, generateImage, saveMessage, createConversation, getMessages, extractMemories, reportContent, type ChatMessage } from "@/lib/marvia-api";
@@ -10,7 +10,7 @@ import { useLocation } from "@/hooks/useLocation";
 import { useCamera } from "@/hooks/useCamera";
 import { toast } from "sonner";
 
-type UIMessage = ChatMessage & { id: string };
+type UIMessage = ChatMessage & { id: string; error?: boolean; retryPayload?: any };
 
 interface ChatViewProps {
   conversationId: string | null;
@@ -21,6 +21,20 @@ interface ChatViewProps {
 }
 
 const FREE_MODELS = ["google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
+
+// Download code as file
+function downloadCode(code: string, lang: string) {
+  const extMap: Record<string, string> = { javascript: "js", typescript: "ts", python: "py", html: "html", css: "css", json: "json", jsx: "jsx", tsx: "tsx" };
+  const ext = extMap[lang] || lang || "txt";
+  const blob = new Blob([code], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `marvia-code.${ext}`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success(`Fichier .${ext} téléchargé !`);
+}
 
 export default function ChatView({ conversationId, onConversationCreated, credits, onConsumeCredit, onRefreshCredits }: ChatViewProps) {
   const { user } = useAuth();
@@ -35,9 +49,11 @@ export default function ChatView({ conversationId, onConversationCreated, credit
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [locationActive, setLocationActive] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stopListeningRef = useRef<(() => void) | null>(null);
+  const userScrolledRef = useRef(false);
 
   useEffect(() => {
     if (conversationId) {
@@ -49,9 +65,24 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     }
   }, [conversationId]);
 
+  // Smart auto-scroll: only auto-scroll if user hasn't scrolled up
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    if (!userScrolledRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }
   }, [messages]);
+
+  // Detect user scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      userScrolledRef.current = !isAtBottom;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -143,12 +174,12 @@ export default function ChatView({ conversationId, onConversationCreated, credit
   // Force free model in normal mode
   const effectiveModel = FREE_MODELS.includes(aiModel) ? aiModel : "google/gemini-3-flash-preview";
 
-  const send = useCallback(async () => {
-    const trimmed = input.trim();
+  const send = useCallback(async (retryContent?: string) => {
+    const trimmed = retryContent || input.trim();
     if (!trimmed && !imagePreview) return;
     if (isLoading) return;
 
-    // Image generation detection - very broad natural language matching
+    // Image generation detection
     const imageNouns = "image|photo|illustration|logo|dessin|picture|artwork|affiche|poster|icon|icône|bannière|banner|portrait|avatar|fond|wallpaper|graphique|graphic|visuel|visual|schéma|schema|infographie|mockup|maquette|art|peinture|painting|sketch|croquis|thumbnail|miniature|cover|couverture|sticker|emoji|mascotte|personnage|character|scene|scène|paysage|landscape";
     const imageVerbs = "génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make|illustre|montre|affiche|produis|conçois|fabrique|peins|trace|compose|réalise|realise|rends|render|design|sketch|craft|show|représente|visualise|modélise|sculpte";
     const imageKeywords = new RegExp(`^(${imageVerbs})\\s.{0,20}(${imageNouns})`, "i");
@@ -163,7 +194,6 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       return;
     }
 
-    // Detect search queries
     const isSearch = trimmed.toLowerCase().startsWith("/search ") || trimmed.toLowerCase().startsWith("/s ");
 
     let currentConvId = conversationId;
@@ -175,36 +205,41 @@ export default function ChatView({ conversationId, onConversationCreated, credit
 
     const userMsgId = crypto.randomUUID();
     const userContent = imagePreview ? `[Image envoyée]\n${trimmed}` : trimmed;
-    const userMsg: UIMessage = { id: userMsgId, role: "user", content: userContent, image_url: imagePreview || undefined };
-    setMessages(prev => [...prev, userMsg]);
-    setInput("");
+    
+    if (!retryContent) {
+      const userMsg: UIMessage = { id: userMsgId, role: "user", content: userContent, image_url: imagePreview || undefined };
+      setMessages(prev => [...prev, userMsg]);
+      setInput("");
+    }
+    
     const sentImage = imagePreview;
     setImagePreview(null);
+    userScrolledRef.current = false; // Reset scroll lock on new message
 
-    if (currentConvId && user) saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
+    if (currentConvId && user && !retryContent) saveMessage(currentConvId, user.id, "user", userContent, sentImage || undefined);
 
     setIsLoading(true);
+    setIsStreaming(true);
 
     // Image generation
     if (isImageGen) {
       const ok = await onConsumeCredit();
-      if (!ok) { setIsLoading(false); toast.error("Crédits épuisés !"); return; }
-      // Extract the descriptive part as prompt - remove command prefix but keep the full description
+      if (!ok) { setIsLoading(false); setIsStreaming(false); toast.error("Crédits épuisés !"); return; }
       let prompt = trimmed.replace(/^\/(image|img)\s+/i, "");
-      // Remove leading verbs like "dessine moi", "crée un", etc. but keep the subject
       prompt = prompt.replace(/^(génère|genere|dessine|crée|cree|créer|imagine|fais|fait|génére|generate|draw|create|make|illustre|montre|affiche|produis|conçois|fabrique|peins|trace|compose|réalise|realise|rends|render|design|sketch|craft|show|représente|visualise|je veux|j'aimerais|peux-tu|tu peux|peut-tu|pourrais-tu|est-ce que tu peux)\s*([-]?\s*(moi|me|nous))?\s*/i, "").trim();
       if (!prompt || prompt.length < 3) prompt = trimmed;
       const assistantId = crypto.randomUUID();
       setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: "🎨 Génération en cours..." }]);
       const result = await generateImage(prompt);
       if (result.error) {
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `❌ ${result.error}` } : m));
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: `❌ ${result.error}`, error: true, retryPayload: trimmed } : m));
       } else if (result.imageUrl) {
         const content = result.text || "Image générée ✨";
         setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content, image_url: result.imageUrl } : m));
         if (currentConvId && user) saveMessage(currentConvId, user.id, "assistant", content, result.imageUrl);
       }
       setIsLoading(false);
+      setIsStreaming(false);
       onRefreshCredits();
       return;
     }
@@ -227,19 +262,20 @@ export default function ChatView({ conversationId, onConversationCreated, credit
         },
         onDone: () => {
           setIsLoading(false);
+          setIsStreaming(false);
           if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
           if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
         },
         onError: (err) => {
           setIsLoading(false);
-          toast.error(err);
-          setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
+          setIsStreaming(false);
+          setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ Erreur de connexion. ${err}`, error: true, retryPayload: trimmed }]);
         },
       });
       return;
     }
 
-    const apiMessages: any[] = messages.map(m => ({ role: m.role, content: m.content }));
+    const apiMessages: any[] = messages.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
 
     if (sentImage) {
       apiMessages.push({ role: "user", content: [{ type: "image_url", image_url: { url: sentImage } }, { type: "text", text: trimmed || "Analyse cette image." }] });
@@ -262,7 +298,6 @@ export default function ChatView({ conversationId, onConversationCreated, credit
         if (!firstChunkTime) {
           firstChunkTime = performance.now();
           const latency = Math.round(firstChunkTime - apiStartTime);
-          // Store monitoring data globally for owner dashboard
           (window as any).__marviaMonitoring = {
             ...((window as any).__marviaMonitoring || {}),
             latency,
@@ -278,14 +313,13 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       },
       onDone: () => {
         setIsLoading(false);
-        // Store response tokens
+        setIsStreaming(false);
         (window as any).__marviaMonitoring = {
           ...((window as any).__marviaMonitoring || {}),
           responseTokens: Math.round(assistantSoFar.length / 4),
         };
         if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
         if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
-        // Extract memories in background
         if (user && assistantSoFar) {
           const recentMsgs = [...apiMessages.slice(-4), { role: "assistant" as const, content: assistantSoFar }];
           extractMemories(user.id, recentMsgs);
@@ -293,14 +327,31 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       },
       onError: (err) => {
         setIsLoading(false);
-        toast.error(err);
-        setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ ${err}` }]);
+        setIsStreaming(false);
+        setMessages(prev => [...prev, { id: assistantId, role: "assistant", content: `❌ Erreur de connexion, veuillez réessayer.`, error: true, retryPayload: trimmed }]);
       },
     });
-  }, [input, imagePreview, isLoading, conversationId, user, messages, effectiveModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, location, locationActive]);
+  }, [input, imagePreview, isLoading, conversationId, user, messages, effectiveModel, responseStyle, voiceEnabled, voiceTone, speak, onConversationCreated, location, locationActive, credits, onConsumeCredit, onRefreshCredits]);
+
+  const handleRetry = (payload: string) => {
+    // Remove the error message then retry
+    setMessages(prev => prev.filter(m => !m.error));
+    send(payload);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  // Extract code blocks for download buttons
+  const extractCodeBlocks = (content: string): { lang: string; code: string }[] => {
+    const blocks: { lang: string; code: string }[] = [];
+    const regex = /```(\w+)?\n([\s\S]*?)```/g;
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      blocks.push({ lang: match[1] || "txt", code: match[2].trim() });
+    }
+    return blocks;
   };
 
   return (
@@ -314,52 +365,87 @@ export default function ChatView({ conversationId, onConversationCreated, credit
             <p className="text-sm text-muted-foreground text-center max-w-[260px]">Posez votre question, Marv-IA est à votre service.</p>
           </div>
         )}
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`}>
-            <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 ${
-              msg.role === "user"
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-secondary text-secondary-foreground rounded-bl-md"
-            }`}>
-              {msg.image_url && msg.role === "user" && (
-                <img src={msg.image_url} alt="Image" className="rounded-lg mb-2 max-w-full max-h-64 object-contain" />
-              )}
-              {msg.image_url && msg.role === "assistant" && (
-                <ImageBubble src={msg.image_url} caption={msg.content !== "Image générée :" ? undefined : undefined} />
-              )}
-              <div className="prose prose-sm prose-invert max-w-none break-words text-[15px] leading-relaxed [&_p]:mb-1 [&_ul]:mb-1 [&_ol]:mb-1 [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_pre]:rounded-lg [&_pre]:bg-background/50 [&_pre]:p-3 [&_pre]:text-xs [&_code]:break-all [&_pre_code]:break-normal [&_pre_code]:whitespace-pre-wrap [&_pre]:my-2 overflow-hidden">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              </div>
-              {msg.role === "assistant" && (
-                <div className="flex gap-2 mt-1.5 -mb-0.5">
-                  <button onClick={() => handleCopy(msg.content, msg.id)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
-                    {copiedId === msg.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                  <button onClick={() => handleShare(msg.content)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
-                    <Share2 className="w-3.5 h-3.5" />
-                  </button>
-                  {voiceEnabled && (
-                    <button onClick={() => speak(msg.content.replace(/[#*_`]/g, "").slice(0, 500), voiceTone)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
-                      <Volume2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <button
-                    onClick={async () => {
-                      if (!user) return;
-                      const { error } = await reportContent(user.id, msg.content, "inappropriate", conversationId || undefined);
-                      if (error) toast.error("Erreur lors du signalement");
-                      else toast.success("⚠️ Contenu signalé. Merci !", { duration: 3000 });
-                    }}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
-                    title="Signaler ce contenu"
-                  >
-                    <Flag className="w-3.5 h-3.5" />
-                  </button>
+        {messages.map((msg, idx) => {
+          const isLastAssistant = msg.role === "assistant" && idx === messages.length - 1;
+          const showCursor = isLastAssistant && isStreaming;
+          const codeBlocks = msg.role === "assistant" ? extractCodeBlocks(msg.content) : [];
+          
+          return (
+            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`}>
+              <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                msg.role === "user"
+                  ? "bg-primary text-primary-foreground rounded-br-md"
+                  : "bg-secondary text-secondary-foreground rounded-bl-md"
+              }`}>
+                {/* User image - show thumbnail with glow instead of [image envoyée] */}
+                {msg.image_url && msg.role === "user" && (
+                  <img src={msg.image_url} alt="Image" className="rounded-lg mb-2 max-w-full max-h-64 object-contain shadow-[0_0_12px_hsl(var(--primary)/0.3)]" />
+                )}
+                {msg.image_url && msg.role === "assistant" && (
+                  <ImageBubble src={msg.image_url} />
+                )}
+                <div className={`prose prose-sm prose-invert max-w-none break-words text-[15px] leading-relaxed [&_p]:mb-1 [&_ul]:mb-1 [&_ol]:mb-1 [&_pre]:overflow-x-auto [&_pre]:max-w-full [&_pre]:rounded-lg [&_pre]:bg-background/50 [&_pre]:p-3 [&_pre]:text-xs [&_code]:break-all [&_pre_code]:break-normal [&_pre_code]:whitespace-pre-wrap [&_pre]:my-2 overflow-hidden ${showCursor ? "streaming-cursor" : ""}`}>
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
-              )}
+
+                {/* Error retry button */}
+                {msg.error && msg.retryPayload && (
+                  <button
+                    onClick={() => handleRetry(msg.retryPayload)}
+                    className="flex items-center gap-1.5 mt-2 text-xs text-primary hover:underline font-medium"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Réessayer
+                  </button>
+                )}
+
+                {/* Code block download buttons */}
+                {codeBlocks.length > 0 && !msg.error && (
+                  <div className="flex flex-wrap gap-1.5 mt-2 pt-1.5 border-t border-border/30">
+                    {codeBlocks.map((block, i) => (
+                      <button
+                        key={i}
+                        onClick={() => downloadCode(block.code, block.lang)}
+                        className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-md hover:bg-primary/20 transition-colors font-medium"
+                      >
+                        <Download className="w-2.5 h-2.5" />
+                        .{block.lang}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {msg.role === "assistant" && !msg.error && (
+                  <div className="flex gap-2 mt-1.5 -mb-0.5">
+                    <button onClick={() => handleCopy(msg.content, msg.id)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                      {copiedId === msg.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => handleShare(msg.content)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                    {voiceEnabled && (
+                      <button onClick={() => speak(msg.content.replace(/[#*_`]/g, "").slice(0, 500), voiceTone)} className="text-muted-foreground hover:text-primary transition-colors p-0.5">
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={async () => {
+                        if (!user) return;
+                        const { error } = await reportContent(user.id, msg.content, "inappropriate", conversationId || undefined);
+                        if (error) toast.error("Erreur lors du signalement");
+                        else toast.success("⚠️ Contenu signalé. Merci !", { duration: 3000 });
+                      }}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                      title="Signaler ce contenu"
+                    >
+                      <Flag className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start animate-slide-up">
             <div className="bg-secondary rounded-2xl rounded-bl-md px-4 py-3">
@@ -419,7 +505,7 @@ export default function ChatView({ conversationId, onConversationCreated, credit
           <button onClick={handleVoice} className={`flex-shrink-0 self-end pb-1 transition-colors ${isListening ? "text-destructive" : "text-muted-foreground hover:text-primary"}`}>
             {isListening ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
-          <button onClick={send} disabled={isLoading || (!input.trim() && !imagePreview)} className="flex-shrink-0 self-end pb-0.5 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity">
+          <button onClick={() => send()} disabled={isLoading || (!input.trim() && !imagePreview)} className="flex-shrink-0 self-end pb-0.5 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center disabled:opacity-40 transition-opacity active-glow">
             <Send className="w-4 h-4" />
           </button>
         </div>

@@ -136,3 +136,18 @@
   0%, 100% { transform: scaleY(0.4); }
   50% { transform: scaleY(1); }
 }
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor::after {
+  content: "▊";
+  display: inline;
+  color: hsl(var(--primary));
+  animation: cursor-blink 0.8s ease-in-out infinite;
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.6), 0 0 16px hsl(var(--primary) / 0.3);
+  font-weight: bold;
+  margin-left: 1px;
+}

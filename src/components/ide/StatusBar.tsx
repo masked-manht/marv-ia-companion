@@ -1,5 +1,5 @@
 import React from "react";
-import { GitBranch, AlertCircle, CheckCircle2, Cloud } from "lucide-react";
+import { GitBranch, AlertCircle, CheckCircle2, Cloud, Zap } from "lucide-react";
 
 interface StatusBarProps {
   language: string;
@@ -9,6 +9,7 @@ interface StatusBarProps {
   lastSaved?: string;
   ideTheme?: "dark" | "light";
   isSyncing?: boolean;
+  tps?: number;
 }
 
 const LANG_LABELS: Record<string, string> = {
@@ -19,7 +20,7 @@ const LANG_LABELS: Record<string, string> = {
   python: "Python",
 };
 
-export default function StatusBar({ language, fileName, lineCount, isAutoSave, lastSaved, isSyncing }: StatusBarProps) {
+export default function StatusBar({ language, fileName, lineCount, isAutoSave, lastSaved, isSyncing, tps }: StatusBarProps) {
   return (
     <div className="flex items-center justify-between px-3 py-[2px] bg-[#007BFF] text-white text-[10px] font-medium flex-shrink-0 select-none" style={{ minHeight: "22px" }}>
       {/* Left */}
@@ -47,11 +48,18 @@ export default function StatusBar({ language, fileName, lineCount, isAutoSave, l
 
       {/* Right */}
       <div className="flex items-center gap-3">
+        {tps !== undefined && tps > 0 && (
+          <span className="flex items-center gap-0.5 bg-white/20 px-1.5 rounded text-[9px]">
+            <Zap className="w-2.5 h-2.5" />
+            {tps} TPS
+          </span>
+        )}
         <span>{lineCount} lignes</span>
         <span>UTF-8</span>
         <span className="bg-white/20 px-1.5 py-0 rounded text-[9px]">
           {LANG_LABELS[language] || language}
         </span>
+        <span className="opacity-60">v2.0.0</span>
       </div>
     </div>
   );

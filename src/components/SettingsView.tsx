@@ -55,8 +55,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [confirmClearMemory, setConfirmClearMemory] = useState(false);
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
-
-  // Owner monitoring state
+  const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
   const [ownerStats, setOwnerStats] = useState({ totalConversations: 0, totalMessages: 0, totalUsers: 0 });
 
   const loadTrash = useCallback(async () => {

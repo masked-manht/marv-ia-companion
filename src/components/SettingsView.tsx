@@ -56,7 +56,15 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
   const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
-  const [ownerStats, setOwnerStats] = useState({ totalConversations: 0, totalMessages: 0, totalUsers: 0 });
+  // Owner monitoring polling
+  useEffect(() => {
+    if (!isOwner) return;
+    const interval = setInterval(() => {
+      const data = (window as any).__marviaMonitoring;
+      if (data) setMonitorData({ promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isOwner]);
 
   const loadTrash = useCallback(async () => {
     if (!user) return;

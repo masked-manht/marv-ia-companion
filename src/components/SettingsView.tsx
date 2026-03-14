@@ -190,7 +190,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
                 {monitorData.latency > 0 ? `${monitorData.latency}ms` : "—"}
               </span>
             </Row>
-            <Row label="Version système" value={`v1.2.0`} />
+            <Row label="Version système" value="v2.0.0" />
             <div className="px-4 py-2 text-[10px] text-muted-foreground">
               Données de monitoring en temps réel. Les tokens sont estimés (~4 caractères = 1 token).
             </div>

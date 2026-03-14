@@ -180,13 +180,15 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
             </span>
           }>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Prompt Tokens (estimé)</span>}>
-              <span className="text-xs font-mono text-primary" id="owner-prompt-tokens">—</span>
+              <span className="text-xs font-mono text-primary">{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Response Tokens (estimé)</span>}>
-              <span className="text-xs font-mono text-primary" id="owner-response-tokens">—</span>
+              <span className="text-xs font-mono text-primary">{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API (dernier appel)</span>}>
-              <span className="text-xs font-mono text-primary" id="owner-latency">—</span>
+              <span className={`text-xs font-mono ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
+                {monitorData.latency > 0 ? `${monitorData.latency}ms` : "—"}
+              </span>
             </Row>
             <Row label="Version système" value={`v1.2.0`} />
             <div className="px-4 py-2 text-[10px] text-muted-foreground">

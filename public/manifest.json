@@ -1,7 +1,7 @@
 {
-  "name": "Marv-IA - Assistant IA intelligent",
+  "name": "Marv-IA v2.0.0 - Assistant IA intelligent",
   "short_name": "Marv-IA",
-  "description": "Assistant IA connecté au réel : recherche web, GPS, mémoire, images. Conçu par Marvens Zamy.",
+  "description": "Assistant IA v2.0.0 connecté au réel : recherche web, GPS, mémoire, images, IDE. Conçu par Marvens Zamy.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

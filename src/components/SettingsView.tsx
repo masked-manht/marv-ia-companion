@@ -625,9 +625,9 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
 
         {/* À propos */}
         <Section icon={<Zap className="w-4 h-4" />} title="À propos">
-          <Row label="Version" value="v1.2.0" />
+          <Row label="Version" value="v2.0.0" />
           <Row label="Développeur" value="Marvens Zamy" />
-          <Row label="Moteur" value="Marv-IA Omni-Protocol v2" />
+          <Row label="Moteur" value="Marv-IA Omni-Protocol v2.0.0" />
         </Section>
       </div>
     </div>

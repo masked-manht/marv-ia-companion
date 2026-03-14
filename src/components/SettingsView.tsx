@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight, Brain, X, Search, Tag, Shield, Activity, Clock, Hash } from "lucide-react";
+import { ArrowLeft, User, Palette, Volume2, Wrench, Info, Moon, Sun, Monitor, Zap, Crown, Bell, RefreshCw, CheckCircle, Code2, Trash2, RotateCcw, AlertTriangle, ChevronRight, Brain, X, Search, Tag, Shield, Activity, Clock, Hash, Users, MessageSquareWarning, HeartPulse } from "lucide-react";
 import { useSettings, ACCENT_OPTIONS, type AccentColor } from "@/contexts/SettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -7,6 +7,7 @@ import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { Switch } from "@/components/ui/switch";
 import { isProModel } from "@/hooks/useCredits";
 import { getDeletedConversations, restoreConversation, permanentlyDeleteConversation, getUserMemories, deleteMemory, clearAllMemories } from "@/lib/marvia-api";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const ACCENT_LABELS: Record<AccentColor, { label: string; preview: string }> = {

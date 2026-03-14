@@ -718,7 +718,12 @@ ${codeContext}`
         {/* Mobile content */}
         <div className="flex-1 overflow-hidden">
           {mobileTab === "editor" && (
-            <CodeEditor value={activeFile.content} onChange={updateFileContent} language={activeFile.language} ideTheme={ideTheme} />
+            <>
+              <div className="flex-1 overflow-hidden" style={{ height: "calc(100% - 40px)" }}>
+                <CodeEditor value={activeFile.content} onChange={updateFileContent} language={activeFile.language} ideTheme={ideTheme} />
+              </div>
+              <SymbolBar onInsert={(sym) => updateFileContent(activeFile.content + sym)} ideTheme={ideTheme} />
+            </>
           )}
           {mobileTab === "preview" && (
             <div className="h-full flex flex-col">

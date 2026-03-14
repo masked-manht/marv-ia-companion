@@ -790,6 +790,7 @@ ${codeContext}`
         isAutoSave={ideAutoSave}
         lastSaved={lastSaved}
         ideTheme={ideTheme}
+        isSyncing={isSyncing}
       />
     </div>
   );

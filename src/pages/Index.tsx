@@ -19,7 +19,7 @@ import { toast } from "sonner";
 
 const IDEView = lazy(() => import("@/components/ide/IDEView"));
 
-type View = "chat" | "pro" | "settings" | "ide";
+type View = "chat" | "pro" | "settings" | "ide" | "studio";
 
 const Index = () => {
   const { user, loading, profileComplete, isOwner, checkProfile } = useAuth();
@@ -32,6 +32,9 @@ const Index = () => {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [showPermissions, setShowPermissions] = useState(false);
+
+  // Detect desktop for Studio mode hint
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
 
   useEffect(() => {
     if (user && !localStorage.getItem("marvia-permissions-asked")) {
@@ -90,6 +93,7 @@ const Index = () => {
     return <PermissionsRequest onComplete={() => setShowPermissions(false)} />;
   }
 
+  // IDE fullscreen
   if (view === "ide") {
     return (
       <Suspense fallback={
@@ -102,6 +106,69 @@ const Index = () => {
       }>
         <IDEView onBack={() => setView("chat")} />
       </Suspense>
+    );
+  }
+
+  // Studio mode: Chat + IDE side by side (desktop only)
+  if (view === "studio") {
+    return (
+      <div className="h-screen flex overflow-hidden bg-background">
+        {/* Chat panel */}
+        <div className="w-[45%] min-w-[360px] flex flex-col border-r border-border">
+          {/* Studio Header */}
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-card border-b border-border flex-shrink-0">
+            <button onClick={() => setSidebarOpen(true)} className="text-muted-foreground hover:text-foreground transition-colors">
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-7 h-7 bg-primary/15 rounded-full flex items-center justify-center">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground leading-tight">Marv-IA Studio</p>
+                <p className="text-[10px] text-primary leading-tight">v2.0.0</p>
+              </div>
+            </div>
+            <button onClick={() => setView("chat")} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-muted transition-colors">
+              Quitter Studio
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            <ChatView
+              conversationId={activeConversationId}
+              onConversationCreated={handleConversationCreated}
+              credits={credits}
+              onConsumeCredit={consumeCredit}
+              onRefreshCredits={refreshCredits}
+            />
+          </div>
+        </div>
+
+        {/* IDE panel */}
+        <div className="flex-1 overflow-hidden">
+          <Suspense fallback={
+            <div className="h-full flex items-center justify-center" style={{ background: "#0A0E14" }}>
+              <Code2 className="w-8 h-8 text-[#007BFF] animate-pulse" />
+            </div>
+          }>
+            <IDEView onBack={() => setView("chat")} />
+          </Suspense>
+        </div>
+
+        <VoiceIndicator isSpeaking={isSpeaking} onStop={stopSpeaking} />
+
+        <SidebarDrawer
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          conversations={conversations}
+          activeId={activeConversationId}
+          onSelect={(id) => { setActiveConversationId(id); }}
+          onNew={handleNewConversation}
+          onDelete={handleDeleteConversation}
+          onOpenSettings={() => setView("settings")}
+        />
+      </div>
     );
   }
 
@@ -146,7 +213,7 @@ const Index = () => {
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground leading-tight">Marv-IA</p>
-            <p className="text-[11px] text-primary leading-tight">En ligne</p>
+            <p className="text-[11px] text-primary leading-tight">v2.0.0 — En ligne</p>
           </div>
         </div>
         <button
@@ -158,13 +225,24 @@ const Index = () => {
           <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-[10px]">{credits}</span>
         </button>
         {ideMode && (
-          <button
-            onClick={() => setView("ide")}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#007BFF]/15 text-[#007BFF] text-xs font-bold hover:bg-[#007BFF]/25 transition-all"
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            <span>IDE</span>
-          </button>
+          <>
+            <button
+              onClick={() => setView("ide")}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#007BFF]/15 text-[#007BFF] text-xs font-bold hover:bg-[#007BFF]/25 transition-all"
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span>IDE</span>
+            </button>
+            {isDesktop && (
+              <button
+                onClick={() => setView("studio")}
+                className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-gradient-to-r from-[#007BFF]/15 to-primary/15 text-[#007BFF] text-xs font-bold hover:from-[#007BFF]/25 hover:to-primary/25 transition-all"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Studio</span>
+              </button>
+            )}
+          </>
         )}
         <button onClick={() => setView("settings")} className="text-muted-foreground hover:text-foreground transition-colors">
           <Settings className="w-5 h-5" />

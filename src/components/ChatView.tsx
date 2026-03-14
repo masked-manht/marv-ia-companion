@@ -251,11 +251,24 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       apiMessages.push({ role: "user", content: stylePrefix + trimmed });
     }
 
+    const apiStartTime = performance.now();
+    let firstChunkTime = 0;
+
     await streamChat({
       messages: apiMessages,
       model: effectiveModel,
       userId: user?.id,
       onDelta: (chunk) => {
+        if (!firstChunkTime) {
+          firstChunkTime = performance.now();
+          const latency = Math.round(firstChunkTime - apiStartTime);
+          // Store monitoring data globally for owner dashboard
+          (window as any).__marviaMonitoring = {
+            ...((window as any).__marviaMonitoring || {}),
+            latency,
+            promptTokens: Math.round(JSON.stringify(apiMessages).length / 4),
+          };
+        }
         assistantSoFar += chunk;
         setMessages(prev => {
           const last = prev[prev.length - 1];
@@ -265,6 +278,11 @@ export default function ChatView({ conversationId, onConversationCreated, credit
       },
       onDone: () => {
         setIsLoading(false);
+        // Store response tokens
+        (window as any).__marviaMonitoring = {
+          ...((window as any).__marviaMonitoring || {}),
+          responseTokens: Math.round(assistantSoFar.length / 4),
+        };
         if (currentConvId && user && assistantSoFar) saveMessage(currentConvId, user.id, "assistant", assistantSoFar);
         if (voiceEnabled && assistantSoFar) speak(assistantSoFar.replace(/[#*_`]/g, "").slice(0, 500), voiceTone);
         // Extract memories in background

@@ -78,6 +78,7 @@ export default function IDEView({ onBack }: IDEViewProps) {
 
   // Auto-save status
   const [lastSaved, setLastSaved] = useState<string>("");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const activeFile = files.find(f => f.id === activeFileId) || files[0];
   const htmlFile = files.find(f => f.language === "html");

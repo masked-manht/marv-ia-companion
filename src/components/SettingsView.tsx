@@ -57,29 +57,49 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
   const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
-  const [ownerStats, setOwnerStats] = useState({ userCount: 0, messageCount: 0, reports: [] as any[] });
+  const [ownerStats, setOwnerStats] = useState({ activeUsers: 0, userCount: 0, messageCount: 0, reports: [] as any[] });
+  const [systemHealth, setSystemHealth] = useState<"ok" | "degraded" | "down">("ok");
+  const [metricFlash, setMetricFlash] = useState<Record<string, boolean>>({});
+
+  // Flash animation helper
+  const flashMetric = (key: string) => {
+    setMetricFlash(prev => ({ ...prev, [key]: true }));
+    setTimeout(() => setMetricFlash(prev => ({ ...prev, [key]: false })), 600);
+  };
 
   // Owner monitoring polling
   useEffect(() => {
     if (!isOwner) return;
     const interval = setInterval(() => {
       const data = (window as any).__marviaMonitoring;
-      if (data) setMonitorData({ promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 });
+      if (data) {
+        setMonitorData(prev => {
+          const newData = { promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 };
+          if (newData.latency !== prev.latency) flashMetric("latency");
+          if (newData.promptTokens !== prev.promptTokens) flashMetric("promptTokens");
+          if (newData.responseTokens !== prev.responseTokens) flashMetric("responseTokens");
+          return newData;
+        });
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [isOwner]);
 
-  // Owner: Load admin stats
+  // Owner: Load admin stats + realtime subscriptions
   useEffect(() => {
     if (!isOwner) return;
+
     const loadStats = async () => {
       try {
-        const [profilesRes, messagesRes, reportsRes] = await Promise.all([
+        const [profilesRes, messagesRes, reportsRes, heartbeatsRes] = await Promise.all([
           supabase.from("profiles").select("id", { count: "exact", head: true }),
           supabase.from("messages").select("id", { count: "exact", head: true }),
           supabase.from("content_reports").select("*").order("created_at", { ascending: false }).limit(20),
+          supabase.from("user_heartbeats" as any).select("id", { count: "exact", head: true })
+            .gte("last_seen_at", new Date(Date.now() - 5 * 60 * 1000).toISOString()),
         ]);
         setOwnerStats({
+          activeUsers: (heartbeatsRes as any).count || 0,
           userCount: profilesRes.count || 0,
           messageCount: messagesRes.count || 0,
           reports: reportsRes.data || [],
@@ -87,6 +107,52 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
       } catch { /* ignore */ }
     };
     loadStats();
+
+    // Realtime: messages count live update
+    const msgChannel = supabase.channel("owner-messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
+        setOwnerStats(prev => {
+          flashMetric("messageCount");
+          return { ...prev, messageCount: prev.messageCount + 1 };
+        });
+      })
+      .subscribe();
+
+    // Realtime: new reports
+    const reportChannel = supabase.channel("owner-reports")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "content_reports" }, (payload) => {
+        flashMetric("reports");
+        setOwnerStats(prev => ({
+          ...prev,
+          reports: [payload.new as any, ...prev.reports].slice(0, 20),
+        }));
+      })
+      .subscribe();
+
+    // Health check every 60s
+    const checkHealth = async () => {
+      try {
+        const start = performance.now();
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-chat`, {
+          method: "OPTIONS",
+          signal: AbortSignal.timeout(5000),
+        }).catch(() => null);
+        const elapsed = performance.now() - start;
+        if (!resp || elapsed > 4000) setSystemHealth("down");
+        else if (elapsed > 2000) setSystemHealth("degraded");
+        else setSystemHealth("ok");
+      } catch {
+        setSystemHealth("down");
+      }
+    };
+    checkHealth();
+    const healthInterval = setInterval(checkHealth, 60000);
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(reportChannel);
+      clearInterval(healthInterval);
+    };
   }, [isOwner]);
 
   const loadTrash = useCallback(async () => {

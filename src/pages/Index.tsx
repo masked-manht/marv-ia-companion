@@ -56,20 +56,20 @@ const Index = () => {
     if (!user) return;
     const sendHeartbeat = async () => {
       try {
-        const { data } = await import("@/integrations/supabase/client").then(m => m.supabase)
-          .from("user_heartbeats")
+        const { data } = await supabase
+          .from("user_heartbeats" as any)
           .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
         if (data) {
-          await (await import("@/integrations/supabase/client")).supabase
-            .from("user_heartbeats")
-            .update({ last_seen_at: new Date().toISOString() } as any)
+          await supabase
+            .from("user_heartbeats" as any)
+            .update({ last_seen_at: new Date().toISOString() })
             .eq("user_id", user.id);
         } else {
-          await (await import("@/integrations/supabase/client")).supabase
-            .from("user_heartbeats")
-            .insert({ user_id: user.id, last_seen_at: new Date().toISOString() } as any);
+          await supabase
+            .from("user_heartbeats" as any)
+            .insert({ user_id: user.id, last_seen_at: new Date().toISOString() });
         }
       } catch {}
     };

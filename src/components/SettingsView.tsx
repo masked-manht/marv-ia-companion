@@ -268,29 +268,36 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
               <span className="text-[9px] font-bold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">OWNER</span>
             </span>
           }>
-            {/* User Stats */}
-            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Utilisateurs actifs</span>}>
-              <span className="text-xs font-mono text-primary font-bold">{ownerStats.userCount}</span>
+            {/* Active Users */}
+            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Utilisateurs actifs (5min)</span>}>
+              <span className={`text-xs font-mono text-primary font-bold ${metricFlash.activeUsers ? "metric-updated" : ""}`}>{ownerStats.activeUsers}</span>
+            </Row>
+            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Total inscrits</span>}>
+              <span className="text-xs font-mono text-primary">{ownerStats.userCount}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Total messages</span>}>
-              <span className="text-xs font-mono text-primary">{ownerStats.messageCount.toLocaleString()}</span>
+              <span className={`text-xs font-mono text-primary ${metricFlash.messageCount ? "metric-updated" : ""}`}>{ownerStats.messageCount.toLocaleString()}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Prompt Tokens (estimé)</span>}>
-              <span className="text-xs font-mono text-primary">{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
+              <span className={`text-xs font-mono text-primary ${metricFlash.promptTokens ? "metric-updated" : ""}`}>{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Response Tokens (estimé)</span>}>
-              <span className="text-xs font-mono text-primary">{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
+              <span className={`text-xs font-mono text-primary ${metricFlash.responseTokens ? "metric-updated" : ""}`}>{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
             </Row>
-            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API</span>}>
-              <span className={`text-xs font-mono ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
+            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API (moy. 5 dernières)</span>}>
+              <span className={`text-xs font-mono ${metricFlash.latency ? "metric-updated" : ""} ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
                 {monitorData.latency > 0 ? `${monitorData.latency}ms` : "—"}
               </span>
             </Row>
             {/* System Health */}
             <Row label={<span className="flex items-center gap-2"><HeartPulse className="w-3.5 h-3.5 text-muted-foreground" />État système</span>}>
-              <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                Opérationnel
+              <span className={`flex items-center gap-1.5 text-xs font-medium ${
+                systemHealth === "ok" ? "text-primary" : systemHealth === "degraded" ? "text-yellow-500" : "text-destructive"
+              }`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${
+                  systemHealth === "ok" ? "bg-primary" : systemHealth === "degraded" ? "bg-yellow-500" : "bg-destructive"
+                }`} />
+                {systemHealth === "ok" ? "Opérationnel" : systemHealth === "degraded" ? "Dégradé" : "Hors ligne"}
               </span>
             </Row>
             <Row label="Version système" value="v2.0.0" />

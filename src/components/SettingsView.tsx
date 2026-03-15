@@ -309,7 +309,8 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           <Section icon={<MessageSquareWarning className="w-4 h-4" />} title={
             <span className="flex items-center gap-2">
               Modération
-              <span className="text-[9px] font-bold bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full">{ownerStats.reports.length}</span>
+              <span className={`text-[9px] font-bold bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full ${metricFlash.reports ? "metric-updated" : ""}`}>{ownerStats.reports.length}</span>
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
             </span>
           }>
             <div className="max-h-64 overflow-y-auto scrollbar-hide divide-y divide-border">

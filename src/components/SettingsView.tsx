@@ -54,6 +54,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memories, setMemories] = useState<any[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [confirmClearMemory, setConfirmClearMemory] = useState(false);
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
   const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });

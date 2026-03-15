@@ -50,15 +50,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For assets (JS, CSS, images): network-first with cache fallback
+  // For assets (JS, CSS, images): stale-while-revalidate for speed
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(event.request).then((cached) => {
+        const fetched = fetch(event.request).then((response) => {
+          cache.put(event.request, response.clone());
+          return response;
+        });
+        return cached || fetched;
       })
-      .catch(() => caches.match(event.request))
+    )
   );
 });
 

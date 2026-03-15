@@ -142,6 +142,15 @@
   50% { opacity: 0; }
 }
 
+@keyframes metric-flash {
+  0% { color: hsl(var(--primary)); transform: scale(1.3); text-shadow: 0 0 8px hsl(var(--primary) / 0.5); }
+  100% { transform: scale(1); text-shadow: none; }
+}
+
+.metric-updated {
+  animation: metric-flash 0.6s ease-out;
+}
+
 .streaming-cursor::after {
   content: "▊";
   display: inline;

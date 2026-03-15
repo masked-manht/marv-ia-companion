@@ -50,6 +50,33 @@ const Index = () => {
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
+  // Heartbeat: upsert every 2 min for presence tracking
+  useEffect(() => {
+    if (!user) return;
+    const sendHeartbeat = async () => {
+      try {
+        const { data } = await import("@/integrations/supabase/client").then(m => m.supabase)
+          .from("user_heartbeats")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data) {
+          await (await import("@/integrations/supabase/client")).supabase
+            .from("user_heartbeats")
+            .update({ last_seen_at: new Date().toISOString() } as any)
+            .eq("user_id", user.id);
+        } else {
+          await (await import("@/integrations/supabase/client")).supabase
+            .from("user_heartbeats")
+            .insert({ user_id: user.id, last_seen_at: new Date().toISOString() } as any);
+        }
+      } catch {}
+    };
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 120000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const handleNewConversation = () => {
     setActiveConversationId(null);
     if (view === "settings") setView("chat");

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Menu, Sparkles, Settings, Crown, Code2, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";

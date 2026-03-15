@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Menu, Sparkles, Settings, Crown, Code2, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import ChatView from "@/components/ChatView";
 import ProChatView from "@/components/ProChatView";
 import SidebarDrawer from "@/components/SidebarDrawer";
@@ -49,6 +50,33 @@ const Index = () => {
   }, [user]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // Heartbeat: upsert every 2 min for presence tracking
+  useEffect(() => {
+    if (!user) return;
+    const sendHeartbeat = async () => {
+      try {
+        const { data } = await supabase
+          .from("user_heartbeats" as any)
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data) {
+          await supabase
+            .from("user_heartbeats" as any)
+            .update({ last_seen_at: new Date().toISOString() })
+            .eq("user_id", user.id);
+        } else {
+          await supabase
+            .from("user_heartbeats" as any)
+            .insert({ user_id: user.id, last_seen_at: new Date().toISOString() });
+        }
+      } catch {}
+    };
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 120000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleNewConversation = () => {
     setActiveConversationId(null);

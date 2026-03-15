@@ -57,29 +57,49 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
   const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
-  const [ownerStats, setOwnerStats] = useState({ userCount: 0, messageCount: 0, reports: [] as any[] });
+  const [ownerStats, setOwnerStats] = useState({ activeUsers: 0, userCount: 0, messageCount: 0, reports: [] as any[] });
+  const [systemHealth, setSystemHealth] = useState<"ok" | "degraded" | "down">("ok");
+  const [metricFlash, setMetricFlash] = useState<Record<string, boolean>>({});
+
+  // Flash animation helper
+  const flashMetric = (key: string) => {
+    setMetricFlash(prev => ({ ...prev, [key]: true }));
+    setTimeout(() => setMetricFlash(prev => ({ ...prev, [key]: false })), 600);
+  };
 
   // Owner monitoring polling
   useEffect(() => {
     if (!isOwner) return;
     const interval = setInterval(() => {
       const data = (window as any).__marviaMonitoring;
-      if (data) setMonitorData({ promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 });
+      if (data) {
+        setMonitorData(prev => {
+          const newData = { promptTokens: data.promptTokens || 0, responseTokens: data.responseTokens || 0, latency: data.latency || 0 };
+          if (newData.latency !== prev.latency) flashMetric("latency");
+          if (newData.promptTokens !== prev.promptTokens) flashMetric("promptTokens");
+          if (newData.responseTokens !== prev.responseTokens) flashMetric("responseTokens");
+          return newData;
+        });
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [isOwner]);
 
-  // Owner: Load admin stats
+  // Owner: Load admin stats + realtime subscriptions
   useEffect(() => {
     if (!isOwner) return;
+
     const loadStats = async () => {
       try {
-        const [profilesRes, messagesRes, reportsRes] = await Promise.all([
+        const [profilesRes, messagesRes, reportsRes, heartbeatsRes] = await Promise.all([
           supabase.from("profiles").select("id", { count: "exact", head: true }),
           supabase.from("messages").select("id", { count: "exact", head: true }),
           supabase.from("content_reports").select("*").order("created_at", { ascending: false }).limit(20),
+          supabase.from("user_heartbeats" as any).select("id", { count: "exact", head: true })
+            .gte("last_seen_at", new Date(Date.now() - 5 * 60 * 1000).toISOString()),
         ]);
         setOwnerStats({
+          activeUsers: (heartbeatsRes as any).count || 0,
           userCount: profilesRes.count || 0,
           messageCount: messagesRes.count || 0,
           reports: reportsRes.data || [],
@@ -87,6 +107,52 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
       } catch { /* ignore */ }
     };
     loadStats();
+
+    // Realtime: messages count live update
+    const msgChannel = supabase.channel("owner-messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => {
+        setOwnerStats(prev => {
+          flashMetric("messageCount");
+          return { ...prev, messageCount: prev.messageCount + 1 };
+        });
+      })
+      .subscribe();
+
+    // Realtime: new reports
+    const reportChannel = supabase.channel("owner-reports")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "content_reports" }, (payload) => {
+        flashMetric("reports");
+        setOwnerStats(prev => ({
+          ...prev,
+          reports: [payload.new as any, ...prev.reports].slice(0, 20),
+        }));
+      })
+      .subscribe();
+
+    // Health check every 60s
+    const checkHealth = async () => {
+      try {
+        const start = performance.now();
+        const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marvia-chat`, {
+          method: "OPTIONS",
+          signal: AbortSignal.timeout(5000),
+        }).catch(() => null);
+        const elapsed = performance.now() - start;
+        if (!resp || elapsed > 4000) setSystemHealth("down");
+        else if (elapsed > 2000) setSystemHealth("degraded");
+        else setSystemHealth("ok");
+      } catch {
+        setSystemHealth("down");
+      }
+    };
+    checkHealth();
+    const healthInterval = setInterval(checkHealth, 60000);
+
+    return () => {
+      supabase.removeChannel(msgChannel);
+      supabase.removeChannel(reportChannel);
+      clearInterval(healthInterval);
+    };
   }, [isOwner]);
 
   const loadTrash = useCallback(async () => {
@@ -202,29 +268,36 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
               <span className="text-[9px] font-bold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">OWNER</span>
             </span>
           }>
-            {/* User Stats */}
-            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Utilisateurs actifs</span>}>
-              <span className="text-xs font-mono text-primary font-bold">{ownerStats.userCount}</span>
+            {/* Active Users */}
+            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Utilisateurs actifs (5min)</span>}>
+              <span className={`text-xs font-mono text-primary font-bold ${metricFlash.activeUsers ? "metric-updated" : ""}`}>{ownerStats.activeUsers}</span>
+            </Row>
+            <Row label={<span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-muted-foreground" />Total inscrits</span>}>
+              <span className="text-xs font-mono text-primary">{ownerStats.userCount}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Total messages</span>}>
-              <span className="text-xs font-mono text-primary">{ownerStats.messageCount.toLocaleString()}</span>
+              <span className={`text-xs font-mono text-primary ${metricFlash.messageCount ? "metric-updated" : ""}`}>{ownerStats.messageCount.toLocaleString()}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Prompt Tokens (estimé)</span>}>
-              <span className="text-xs font-mono text-primary">{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
+              <span className={`text-xs font-mono text-primary ${metricFlash.promptTokens ? "metric-updated" : ""}`}>{monitorData.promptTokens > 0 ? `~${monitorData.promptTokens.toLocaleString()}` : "—"}</span>
             </Row>
             <Row label={<span className="flex items-center gap-2"><Hash className="w-3.5 h-3.5 text-muted-foreground" />Response Tokens (estimé)</span>}>
-              <span className="text-xs font-mono text-primary">{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
+              <span className={`text-xs font-mono text-primary ${metricFlash.responseTokens ? "metric-updated" : ""}`}>{monitorData.responseTokens > 0 ? `~${monitorData.responseTokens.toLocaleString()}` : "—"}</span>
             </Row>
-            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API</span>}>
-              <span className={`text-xs font-mono ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
+            <Row label={<span className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-muted-foreground" />Latence API (moy. 5 dernières)</span>}>
+              <span className={`text-xs font-mono ${metricFlash.latency ? "metric-updated" : ""} ${monitorData.latency > 0 ? (monitorData.latency < 1000 ? "text-primary" : monitorData.latency < 3000 ? "text-yellow-500" : "text-destructive") : "text-primary"}`}>
                 {monitorData.latency > 0 ? `${monitorData.latency}ms` : "—"}
               </span>
             </Row>
             {/* System Health */}
             <Row label={<span className="flex items-center gap-2"><HeartPulse className="w-3.5 h-3.5 text-muted-foreground" />État système</span>}>
-              <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                Opérationnel
+              <span className={`flex items-center gap-1.5 text-xs font-medium ${
+                systemHealth === "ok" ? "text-primary" : systemHealth === "degraded" ? "text-yellow-500" : "text-destructive"
+              }`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${
+                  systemHealth === "ok" ? "bg-primary" : systemHealth === "degraded" ? "bg-yellow-500" : "bg-destructive"
+                }`} />
+                {systemHealth === "ok" ? "Opérationnel" : systemHealth === "degraded" ? "Dégradé" : "Hors ligne"}
               </span>
             </Row>
             <Row label="Version système" value="v2.0.0" />
@@ -236,7 +309,8 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
           <Section icon={<MessageSquareWarning className="w-4 h-4" />} title={
             <span className="flex items-center gap-2">
               Modération
-              <span className="text-[9px] font-bold bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full">{ownerStats.reports.length}</span>
+              <span className={`text-[9px] font-bold bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full ${metricFlash.reports ? "metric-updated" : ""}`}>{ownerStats.reports.length}</span>
+              <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
             </span>
           }>
             <div className="max-h-64 overflow-y-auto scrollbar-hide divide-y divide-border">

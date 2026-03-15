@@ -290,6 +290,10 @@ export default function ChatView({ conversationId, onConversationCreated, credit
     const apiStartTime = performance.now();
     let firstChunkTime = 0;
 
+    // Track latency history for rolling average
+    const mon = (window as any).__marviaMonitoring || {};
+    if (!mon.latencyHistory) mon.latencyHistory = [];
+
     await streamChat({
       messages: apiMessages,
       model: effectiveModel,
@@ -298,9 +302,13 @@ export default function ChatView({ conversationId, onConversationCreated, credit
         if (!firstChunkTime) {
           firstChunkTime = performance.now();
           const latency = Math.round(firstChunkTime - apiStartTime);
+          mon.latencyHistory.push(latency);
+          if (mon.latencyHistory.length > 5) mon.latencyHistory.shift();
+          const avgLatency = Math.round(mon.latencyHistory.reduce((a: number, b: number) => a + b, 0) / mon.latencyHistory.length);
           (window as any).__marviaMonitoring = {
-            ...((window as any).__marviaMonitoring || {}),
-            latency,
+            ...mon,
+            latency: avgLatency,
+            lastLatency: latency,
             promptTokens: Math.round(JSON.stringify(apiMessages).length / 4),
           };
         }

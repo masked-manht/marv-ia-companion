@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marvia-v2.1';
+const CACHE_NAME = 'marvia-v2.1.1';
 const PRECACHE_URLS = [
   '/marvia-icon.png',
   '/manifest.json',

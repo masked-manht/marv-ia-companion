@@ -54,6 +54,7 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
   const [memories, setMemories] = useState<any[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
   const [confirmClearMemory, setConfirmClearMemory] = useState(false);
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [memorySearch, setMemorySearch] = useState("");
   const [memoryFilter, setMemoryFilter] = useState<string | null>(null);
   const [monitorData, setMonitorData] = useState({ promptTokens: 0, responseTokens: 0, latency: 0 });
@@ -357,9 +358,64 @@ export default function SettingsView({ onBack, credits, onConversationsChanged }
         <Section icon={<User className="w-4 h-4" />} title="Compte">
           <Row label="Utilisateur" value={user?.email || "Non connecté"} />
           {user && (
-            <div className="px-4 py-3">
-              <button onClick={signOut} className="text-sm text-destructive hover:underline">Se déconnecter</button>
-            </div>
+            <>
+              <Row label="Membre depuis">
+                <span className="text-xs text-muted-foreground">
+                  {(() => {
+                    const created = new Date(user.created_at);
+                    const days = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
+                    return `${created.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} (${days}j)`;
+                  })()}
+                </span>
+              </Row>
+              <div className="px-4 py-3 flex items-center justify-between">
+                <button onClick={signOut} className="text-sm text-destructive hover:underline">Se déconnecter</button>
+                <button
+                  onClick={() => setConfirmDeleteAccount(true)}
+                  className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  Supprimer mon compte
+                </button>
+              </div>
+              {confirmDeleteAccount && (
+                <div className="px-4 pb-3">
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
+                      <p className="text-xs text-destructive font-medium">Supprimer définitivement votre compte ?</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Toutes vos conversations, souvenirs et données seront supprimés de façon irréversible.</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            // Delete user data then sign out
+                            if (user) {
+                              await supabase.from("messages").delete().eq("user_id", user.id);
+                              await supabase.from("conversations").delete().eq("user_id", user.id);
+                              await supabase.from("user_memories").delete().eq("user_id", user.id);
+                              await supabase.from("profiles").delete().eq("user_id", user.id);
+                              await supabase.from("user_credits").delete().eq("user_id", user.id);
+                              await supabase.from("content_reports").delete().eq("user_id", user.id);
+                            }
+                            await signOut();
+                            toast.success("Compte supprimé. Au revoir 👋");
+                          } catch {
+                            toast.error("Erreur lors de la suppression");
+                          }
+                        }}
+                        className="text-[11px] font-bold text-destructive-foreground bg-destructive px-3 py-1.5 rounded-lg"
+                      >
+                        Oui, supprimer
+                      </button>
+                      <button onClick={() => setConfirmDeleteAccount(false)} className="text-[11px] text-muted-foreground px-2 py-1.5">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Section>
 
